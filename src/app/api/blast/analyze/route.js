@@ -29,14 +29,30 @@ import { handle, requireAuth, rateLimit, assertOwner, parseRids, ApiError } from
  *
  * Override with GEMINI_MODEL (comma-separated, highest preference first).
  */
-const DEFAULT_MODELS = 'gemini-3.1-pro-preview,gemini-pro-latest,gemini-flash-latest';
+const DEFAULT_MODELS = 'gemini-3.5-flash,gemini-flash-latest,gemini-3.1-pro-preview';
 const MODEL_CANDIDATES = (process.env.GEMINI_MODEL || DEFAULT_MODELS)
   .split(',').map((s) => s.trim()).filter(Boolean);
 
 const endpointFor = (model) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-const REQUEST_TIMEOUT_MS = 150_000;
+// A Flash model answering a few-thousand-token prompt should return well
+// inside 60s. The old 150s meant a single overloaded model could hold the
+// request open for over a minute before the fallback even started.
+const REQUEST_TIMEOUT_MS = 60_000;
+
+/**
+ * Transient upstream failures. 503 is the common one — Gemini returns
+ * "This model is currently experiencing high demand" under load — and it was
+ * previously NOT retried, so the fallback chain never advanced past the first
+ * model and callers silently received the local summary instead.
+ */
+const TRANSIENT = new Set([408, 429, 500, 502, 503, 504]);
+
+/** Model is gone or not available to this key: skip it, do not retry it. */
+const SKIP_MODEL = new Set([400, 404]);
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const SYSTEM_PROMPT = `You are a molecular biologist writing the interpretation section of a sequence-analysis report. Your reader is a working scientist who can already read a BLAST table; your value is judgement, not restatement.
 
@@ -206,8 +222,13 @@ async function callGemini(apiKey, model, prompt) {
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       // Log server-side only; the body can echo request detail.
-      console.error(`Gemini ${model} -> HTTP ${res.status}`, body.slice(0, 400));
-      return { ok: false, status: res.status, retryNext: res.status === 404 || res.status === 429 };
+      console.error(`Gemini ${model} -> HTTP ${res.status} ${body.replace(/\s+/g, ' ').slice(0, 240)}`);
+      return {
+        ok: false,
+        status: res.status,
+        retryNext: TRANSIENT.has(res.status) || SKIP_MODEL.has(res.status),
+        retrySame: TRANSIENT.has(res.status),
+      };
     }
 
     const data = await res.json();
@@ -215,13 +236,13 @@ async function callGemini(apiKey, model, prompt) {
     const text = cand?.content?.parts?.map((p) => p.text).filter(Boolean).join('') || '';
     if (!text || text.trim().length < 80) {
       console.warn(`Gemini ${model} returned no usable text, finishReason=${cand?.finishReason}`);
-      return { ok: false, status: 200, retryNext: true, empty: true };
+      return { ok: false, status: 200, retryNext: true, retrySame: false, empty: true };
     }
     return { ok: true, text, model, usage: data.usageMetadata || null };
   } catch (err) {
     const timedOut = err?.name === 'AbortError';
     console.error(`Gemini ${model} ${timedOut ? 'timed out' : 'failed'}: ${err?.message}`);
-    return { ok: false, status: timedOut ? 504 : 502, retryNext: true, timedOut };
+    return { ok: false, status: timedOut ? 504 : 502, retryNext: true, retrySame: !timedOut, timedOut };
   } finally {
     clearTimeout(timer);
   }
@@ -231,6 +252,7 @@ function reasonFor(status, model) {
   if (status === 401 || status === 403) return 'The configured Gemini API key was rejected.';
   if (status === 404) return `No configured Gemini model was available to this API key (last tried: ${model}).`;
   if (status === 429) return 'The Gemini API quota is exhausted for every configured model. Pro-tier models have no free-tier quota — enable billing on the API project, or set GEMINI_MODEL to a Flash model.';
+  if (status === 503) return 'Every configured Gemini model is currently overloaded. This is usually brief — try again in a minute.';
   if (status === 504) return 'The Gemini request timed out.';
   return `The Gemini API could not be reached (last status ${status}).`;
 }
@@ -286,8 +308,17 @@ export const POST = handle(async (request) => {
   let last = { status: 502, model: MODEL_CANDIDATES[0] };
   const attempted = [];
   for (const model of MODEL_CANDIDATES) {
-    const r = await callGemini(apiKey, model, prompt);
+    let r = await callGemini(apiKey, model, prompt);
     attempted.push(model);
+
+    // A 503 "high demand" spike often clears within a second or two, so give
+    // the same model one quick second chance before moving down the chain.
+    if (!r.ok && r.retrySame) {
+      await sleep(1500);
+      r = await callGemini(apiKey, model, prompt);
+      attempted.push(`${model} (retry)`);
+    }
+
     if (r.ok) {
       return NextResponse.json({
         source: 'gemini',
