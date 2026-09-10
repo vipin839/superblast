@@ -1,0 +1,43 @@
+{
+  "title": "BLASTHub: bulk sequence search on managed NCBI BLAST+ infrastructure",
+  "description": "<p>BLASTHub is a web application for bulk sequence similarity search. It executes genuine NCBI BLAST+ searches &mdash; <code>blastn</code>, <code>blastp</code>, <code>blastx</code>, <code>tblastn</code> and <code>tblastx</code> &mdash; against pre-indexed reference databases on managed cloud infrastructure, and returns the native JSON-15 output parsed into an interactive hit table with per-HSP pairwise alignments.</p><p>Nucleotide and protein databases are provided for <em>Drosophila melanogaster</em>, <em>Escherichia coli</em> K-12 MG1655, <em>Saccharomyces cerevisiae</em> S288C and SARS-CoV-2, each pinned to a specific NCBI assembly accession with a recorded SHA-256 checksum and taxonomy identifier. The container build verifies every database with <code>blastdbcmd</code> and runs one search per program before the image ships, so a database that cannot be opened or searched cannot reach production.</p><p>Results can be exported as a multi-sheet Excel workbook, a landscape PDF report, or raw JSON and CSV. An optional interpretation step summarises results using the Gemini API; that output is explicitly non-reproducible and is labelled as such in the interface.</p>",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "MIT",
+
+  "creators": [
+    {
+      "name": "Saini, Vipin",
+      "affiliation": "REPLACE WITH YOUR INSTITUTION",
+      "orcid": "0000-0000-0000-0000"
+    }
+  ],
+
+  "keywords": [
+    "bioinformatics",
+    "BLAST",
+    "sequence alignment",
+    "nucleotide",
+    "protein",
+    "genomics",
+    "reference genome",
+    "web application"
+  ],
+
+  "related_identifiers": [
+    {
+      "identifier": "https://superblast.app",
+      "relation": "isIdenticalTo",
+      "resource_type": "software",
+      "scheme": "url"
+    },
+    {
+      "identifier": "10.1186/1471-2105-10-421",
+      "relation": "requires",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    }
+  ],
+
+  "notes": "Built on the NCBI BLAST+ suite (version 2.17.0), which is a United States Government Work in the public domain. BLAST is a registered trademark of the National Library of Medicine. Reference sequence data is obtained from NCBI RefSeq and remains subject to NCBI data usage policies; accessions and checksums for every bundled database are recorded in docs/DATABASES.md."
+}
