@@ -1,0 +1,38 @@
+MIT License
+
+Copyright (c) 2026 Vipin Saini
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+THIRD-PARTY COMPONENTS
+
+This software orchestrates but does not include the NCBI BLAST+ suite.
+BLAST+ is produced by the National Center for Biotechnology Information and is
+a United States Government Work in the public domain within the United States.
+BLAST® is a registered trademark of the National Library of Medicine.
+See https://blast.ncbi.nlm.nih.gov/doc/blast-help/
+
+Reference sequence data is obtained from NCBI RefSeq and NCBI Nucleotide and
+remains subject to NCBI's data usage policies. Accessions, assembly identifiers
+and checksums for every bundled database are recorded in docs/DATABASES.md.
+
+Runtime dependencies are distributed under their own licences; see
+package.json and the corresponding entries in node_modules.

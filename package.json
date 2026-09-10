@@ -1,6 +1,6 @@
 {
   "name": "blasthub",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -26,5 +26,13 @@
     "eslint": "^9",
     "eslint-config-next": "^16.3.4",
     "vitest": "^5.0.0"
-  }
+  },
+  "description": "Bulk nucleotide sequence search on managed NCBI BLAST+ infrastructure",
+  "license": "MIT",
+  "author": "Vipin Saini <sainivipin839@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vipin839/superblast.git"
+  },
+  "homepage": "https://superblast.app"
 }

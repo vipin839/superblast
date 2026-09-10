@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button, Card, Icons as I, useToast } from '@/components/ui';
 
+const APP_VERSION = '2.0.0';
 const CONTACT_EMAIL = 'sainivipin839@gmail.com';
 const GITHUB_URL = 'https://github.com/vipin839';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/s-vipin/';
-const DEPLOY_TIME = '2026-09-10 15:12:47 IST';
+const DEPLOY_TIME = '2026-09-10 15:23:03 IST';
 
 /* Every claim below is backed by something the codebase actually does. */
 const FEATURES = [
@@ -206,7 +207,9 @@ export default function HomePage() {
               Built on NCBI BLAST+ and Google Cloud Platform.<br />
               BLAST® is a registered trademark of the National Library of Medicine.
             </p>
-            <p className="mk-legal mono">Last deployed: {DEPLOY_TIME}</p>
+            <p className="mk-legal mono">
+              v{APP_VERSION} · NCBI BLAST+ 2.17.0 · last deployed {DEPLOY_TIME}
+            </p>
           </div>
 
           <div className="mk-foot-links">
