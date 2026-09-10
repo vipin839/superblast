@@ -1,4 +1,4 @@
-# BLASTHub
+# SuperBLAST
 
 **Bulk sequence search on managed NCBI BLAST+ infrastructure — all five BLAST
 programs, with interactive alignment inspection and publication-ready export.**
@@ -9,11 +9,20 @@ programs, with interactive alignment inspection and publication-ready export.**
 
 Live instance: **<https://superblast.app>**
 
-BLASTHub runs genuine BLAST+ searches — `blastn`, `blastp`, `blastx`, `tblastn`
-and `tblastx` — against pre-indexed reference databases, and returns the native
-NCBI JSON-15 output parsed into a sortable hit table with per-HSP alignments.
-It is a managed front end to BLAST+ — not a reimplementation, and not a queue
-in front of the public NCBI service.
+SuperBLAST (also referred to as BLAST Hub) runs genuine BLAST+ searches —
+`blastn`, `blastp`, `blastx`, `tblastn` and `tblastx` — against pre-indexed
+reference databases, and returns the native NCBI JSON-15 output parsed into a
+sortable hit table with per-HSP alignments.
+
+It exists to remove the two obstacles that keep bulk BLAST out of reach of most
+bench biologists: the public NCBI service takes one query at a time, and
+standalone BLAST+ demands installation, database construction and scripting.
+SuperBLAST takes a hundred files at once and hands back one organised result
+set. It is a managed front end to BLAST+ — not a reimplementation, and not a
+queue in front of the public NCBI service.
+
+Background, the approaches that led here, usage and citation guidance are on
+the [About page](https://superblast.app/about), which needs no sign-in.
 
 Nucleotide and protein databases are provided for each model organism, so every
 program has a compatible target. Incompatible program/database or
@@ -144,7 +153,7 @@ configuration are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ```bash
 npm run lint     # must report 0 errors
-npm test         # 130 tests
+npm test         # 147 tests
 npm run build
 ```
 
@@ -203,7 +212,7 @@ Stated plainly rather than buried:
 Archived on Zenodo. Cite the **concept DOI**, which always resolves to the
 most recent version:
 
-> Saini, V. BLASTHub: bulk sequence search on managed NCBI BLAST+
+> Vipin. SuperBLAST (BLAST Hub): bulk sequence search on managed NCBI BLAST+
 > infrastructure. Zenodo. https://doi.org/10.5281/zenodo.22688703
 
 | DOI | Resolves to |

@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "BLASTHub: bulk nucleotide sequence search on managed NCBI BLAST+ infrastructure"
+title: "SuperBLAST (BLAST Hub): bulk sequence search on managed NCBI BLAST+ infrastructure"
 message: "If you use this software in work you publish, please cite it using these metadata."
 type: software
 authors:
@@ -11,22 +11,28 @@ authors:
 repository-code: "https://github.com/vipin839/superblast"
 url: "https://superblast.app"
 abstract: >-
-  BLASTHub is a web application for bulk nucleotide sequence search. It executes
-  genuine NCBI BLAST+ blastn searches against pre-indexed reference databases on
-  managed cloud infrastructure and returns native JSON-15 output parsed into an
-  interactive hit table with per-HSP pairwise alignments. Reference databases are
-  pinned to specific NCBI assembly accessions with recorded checksums, and the
-  build verifies each database with blastdbcmd before shipping. Results can be
-  exported as a multi-sheet Excel workbook, a PDF report, or raw JSON and CSV.
+  SuperBLAST is a web application for bulk sequence similarity searching. It
+  executes genuine NCBI BLAST+ searches - blastn, blastp, blastx, tblastn and
+  tblastx - against pre-indexed reference databases on managed cloud
+  infrastructure, and returns native JSON-15 output parsed into an interactive
+  hit table with per-HSP pairwise alignments. Nucleotide and protein databases
+  are provided for each reference organism, pinned to specific NCBI assembly
+  accessions with recorded SHA-256 checksums and taxonomy identifiers; the build
+  verifies every database with blastdbcmd and runs one search per program before
+  the image ships. A submission takes up to 100 FASTA files, and results export
+  as a multi-sheet Excel workbook, a PDF report, or raw JSON and CSV.
 keywords:
   - bioinformatics
   - BLAST
   - sequence alignment
   - nucleotide
+  - protein
   - genomics
+  - sequence data management
+  - research software
   - web application
 license: MIT
-version: 2.1.2
+version: 2.2.0
 date-released: "2026-09-10"
 
 # Concept DOI: always resolves to the newest archived version. This is the one
@@ -63,4 +69,4 @@ references:
     volume: 10
     start: 421
     doi: "10.1186/1471-2105-10-421"
-    notes: "The BLAST+ suite that this software orchestrates. Cite alongside BLASTHub."
+    notes: "The BLAST+ suite that this software orchestrates. Cite alongside SuperBLAST."

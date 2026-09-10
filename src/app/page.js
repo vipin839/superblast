@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button, Card, Icons as I, useToast } from '@/components/ui';
 
-const APP_VERSION = '2.1.2';
+const APP_VERSION = '2.2.0';
 const CONTACT_EMAIL = 'sainivipin839@gmail.com';
 const GITHUB_URL = 'https://github.com/vipin839';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/s-vipin/';
