@@ -181,10 +181,17 @@ const RESIDUE_ALPHABET = {
  * Validate an uploaded FASTA file against the molecule a program requires.
  *
  * The browser calls this before upload so a rejection is instant, and it
- * enforces the same contract as the submit route: structure, then residue
- * alphabet, then composition. The alphabets overlap heavily — every
- * nucleotide letter is also a valid amino-acid letter — so the character
- * check alone cannot separate the two, and `detectSequenceType` settles it.
+ * enforces the same contract as the submit route: structure, then
+ * composition, then residue alphabet.
+ *
+ * Composition is checked BEFORE the alphabet, because the two failures need
+ * different answers. A file that is simply the wrong molecule is the common
+ * case and the user's fix is to change program — telling them instead that
+ * line 2 holds a bad character is true but useless, and a protein file fails
+ * the nucleotide alphabet on its first line of sequence, so an alphabet-first
+ * order never reaches the message that helps. Once composition agrees, a
+ * stray character means a malformed file rather than the wrong one, and the
+ * line number is then the useful part.
  *
  * @param {string} content   raw file contents
  * @param {'nucl'|'prot'} queryType  molecule the selected program requires
@@ -198,29 +205,30 @@ export function validateQueryFasta(content, queryType) {
     return { valid: false, reason: 'Must begin with a > header line' };
   }
 
-  const alphabet = RESIDUE_ALPHABET[wanted];
   const lines = trimmed.split(/\r?\n/);
-  let hasSequence = false;
+  const hasSequence = lines.slice(1)
+    .some((l) => { const t = l.trim(); return t.length > 0 && !t.startsWith('>'); });
+  if (!hasSequence) return { valid: false, reason: 'No sequence data after the header' };
 
+  const detected = detectSequenceType(trimmed);
+  if ((detected.type === 'nucl' || detected.type === 'prot') && detected.type !== wanted) {
+    const got = detected.type === 'prot' ? 'protein' : 'nucleotide';
+    const switchTo = detected.type === 'prot'
+      ? 'blastp or tblastn'
+      : 'blastn, blastx or tblastx';
+    return {
+      valid: false,
+      reason: `This is a ${got} sequence, but the selected program needs a ${molecule} query. `
+        + `Change the BLAST program to ${switchTo}, then add the file again.`,
+    };
+  }
+
+  const alphabet = RESIDUE_ALPHABET[wanted];
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (line.startsWith('>') || line.length === 0) continue;
     if (!alphabet.test(line)) {
       return { valid: false, reason: `Line ${i + 1} contains a character that is not a ${molecule} residue` };
-    }
-    hasSequence = true;
-  }
-
-  if (!hasSequence) return { valid: false, reason: 'No sequence data after the header' };
-
-  const detected = detectSequenceType(trimmed);
-  if (detected.type === 'nucl' || detected.type === 'prot') {
-    if (detected.type !== wanted) {
-      const got = detected.type === 'prot' ? 'protein' : 'nucleotide';
-      const alternatives = wanted === 'prot'
-        ? 'Use blastn, blastx or tblastx for nucleotide queries.'
-        : 'Use blastp or tblastn for protein queries.';
-      return { valid: false, reason: `This looks like a ${got} sequence, but ${molecule} is required. ${alternatives}` };
     }
   }
 

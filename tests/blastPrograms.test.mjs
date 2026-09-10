@@ -232,26 +232,42 @@ describe('upload validation follows the program, not a fixed alphabet', () => {
     expect(validateQueryFasta(RNA, 'nucl').valid).toBe(true);
   });
 
-  it('rejects a protein file offered to a nucleotide program, naming the line', () => {
+  /**
+   * The reported symptom: uploading a protein file with blastn selected said
+   * only "Line 2 contains a character that is not a nucleotide residue". True,
+   * but it does not say what to do. Composition is checked before the alphabet
+   * so the message names the program to switch to.
+   */
+  it('tells a protein file offered to blastn which program to switch to', () => {
     const r = validateQueryFasta(PROT, 'nucl');
     expect(r.valid).toBe(false);
-    expect(r.reason).toMatch(/Line 2/);
-    expect(r.reason).toMatch(/nucleotide/);
+    expect(r.reason).toMatch(/blastp or tblastn/);
+    expect(r.reason).not.toMatch(/Line \d/);
   });
 
   /** Every nucleotide letter is also a valid amino-acid letter, so the
    *  character check alone cannot catch this — composition has to. */
-  it('rejects a nucleotide file offered to a protein program', () => {
+  it('tells a nucleotide file offered to blastp which program to switch to', () => {
     const r = validateQueryFasta(DNA, 'prot');
     expect(r.valid).toBe(false);
-    expect(r.reason).toMatch(/looks like a nucleotide sequence/);
+    expect(r.reason).toMatch(/This is a nucleotide sequence/);
     expect(r.reason).toMatch(/blastn, blastx or tblastx/);
+    expect(r.reason).not.toMatch(/Line \d/);
   });
 
-  it('names the alternative programs in the other direction too', () => {
-    expect(validateQueryFasta(PROT, 'nucl').reason).not.toMatch(/tblastn/);
-    const dnaToProt = validateQueryFasta(DNA, 'prot');
-    expect(dnaToProt.reason).toMatch(/blastx/);
+  it('names the molecule the program wants, not only the one it got', () => {
+    expect(validateQueryFasta(PROT, 'nucl').reason).toMatch(/needs a nucleotide query/);
+    expect(validateQueryFasta(DNA, 'prot').reason).toMatch(/needs a protein query/);
+  });
+
+  /** Once composition agrees, a stray character means a malformed file rather
+   *  than the wrong one, and the line number becomes the useful part. */
+  it('still reports the line number for a genuinely malformed file', () => {
+    const junk = '>x\nATGGCTAGCTAGCTAGCATCGATCGATCG\nATCG@@@!!!TAGCTAGCTAGCATCGATCG';
+    const r = validateQueryFasta(junk, 'nucl');
+    expect(r.valid).toBe(false);
+    expect(r.reason).toMatch(/Line 3/);
+    expect(r.reason).toMatch(/not a nucleotide residue/);
   });
 
   it('keeps the structural checks', () => {
