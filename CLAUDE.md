@@ -18,16 +18,16 @@ interprets the results.
 | React | 19.2.4 |
 | Styling | CSS custom-property design system in `src/app/globals.css`; three-state theme (system/light/dark) |
 | BLAST engine | NCBI BLAST+ 2.17.0 native binaries; `blastn` with `megablast`, `dc-megablast`, `blastn` tasks; `-outfmt 15` |
-| AI | Google Gemini 2.5 Pro via REST (`generativelanguage.googleapis.com`, model id `gemini-2.5-pro`). **No `@google/genai` package is used.** |
+| AI | Google Gemini via REST (`generativelanguage.googleapis.com`). Model is a candidate list in `GEMINI_MODEL`, first that answers wins; the response reports which one ran. **No `@google/genai` package is used.** |
 | Auth | Firebase Auth (Google sign-in); server verifies ID tokens with Firebase Admin |
 | Metadata | Cloud Firestore via Admin SDK |
 | Result payloads | Cloud Storage (`BLAST_RESULTS_BUCKET`) |
 | Host | Cloud Run service `blasthub`, us-central1, 4 GiB / 2 vCPU |
 | Domain | Firebase Hosting rewrites `superblast.app` to the Cloud Run service |
 
-`www.superblast.app` **does not resolve** — see
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and the DNS note in section 6.
-Use the apex `superblast.app`.
+`www.superblast.app` is a 301 redirect to the apex, registered in Firebase
+Hosting with an A record at `199.36.158.100`. Certificate provisioning may
+still be in progress — see section 6.
 
 ---
 
@@ -37,7 +37,8 @@ Use the apex `superblast.app`.
 - Region: `us-central1`
 - Cloud Run service: `blasthub`
 - Image: `us-central1-docker.pkg.dev/super-blast-497610/cloud-run-source-deploy/blasthub:latest`
-- Base image: `.../blasthub-base:blast2.17.0-db2`
+- Base image: `.../blasthub-base:blast2.17.0-db3` (BLAST+ 2.17.0, five databases, NCBI taxdb)
+- Repository: `https://github.com/vipin839/superblast`
 - Results bucket: `blasthub-results-super-blast-497610`
 - Runtime service account: `523316980019-compute@developer.gserviceaccount.com`
 - Direct URL: `https://blasthub-523316980019.us-central1.run.app`
@@ -108,9 +109,9 @@ RIDs go through `assertRid()` / `parseRids()` first. The allowlist
 
 ### C. Never claim something the system did not do
 No fake "terminated" for a process still running, no "Ready" badge for a
-database that cannot run, no "Gemini 2.5 Pro" label on a local summary. When
-a capability is unavailable, the response carries a `reason` and the UI shows
-it.
+database that cannot run, and never a model name on a summary that model did
+not produce. When a capability is unavailable, the response carries a `reason`
+and the UI shows it.
 
 ### D. Cache invalidation on the live domain
 `src/app/layout.js` must keep:
