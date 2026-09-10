@@ -29,6 +29,9 @@ old_version_backup/
 _snapshots/
 
 # ── Local scratch and generated artifacts ────────────────────────────────
+# jsPDF's doc.save() writes to disk when the export tests run under Node.
+BLASTHub_Report_*.pdf
+BLASTHub_Results_*.xlsx
 *.tgz
 *.log
 logs.json
