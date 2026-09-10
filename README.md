@@ -1,17 +1,23 @@
 # BLASTHub
 
-**Bulk nucleotide sequence search on managed NCBI BLAST+ infrastructure, with
-interactive alignment inspection and publication-ready export.**
+**Bulk sequence search on managed NCBI BLAST+ infrastructure — all five BLAST
+programs, with interactive alignment inspection and publication-ready export.**
 
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![BLAST+](https://img.shields.io/badge/NCBI%20BLAST%2B-2.17.0-informational.svg)](https://blast.ncbi.nlm.nih.gov/)
 
 Live instance: **<https://superblast.app>**
 
-BLASTHub runs genuine `blastn` searches against pre-indexed reference databases
-and returns the native NCBI JSON-15 output, parsed into a sortable hit table
-with per-HSP alignments. It is a managed front end to BLAST+ — not a
-reimplementation, and not a queue in front of the public NCBI service.
+BLASTHub runs genuine BLAST+ searches — `blastn`, `blastp`, `blastx`, `tblastn`
+and `tblastx` — against pre-indexed reference databases, and returns the native
+NCBI JSON-15 output parsed into a sortable hit table with per-HSP alignments.
+It is a managed front end to BLAST+ — not a reimplementation, and not a queue
+in front of the public NCBI service.
+
+Nucleotide and protein databases are provided for each model organism, so every
+program has a compatible target. Incompatible program/database or
+program/query pairings are rejected with an explanatory message before a
+process is spawned.
 
 ---
 
@@ -33,8 +39,8 @@ reimplementation, and not a queue in front of the public NCBI service.
 
 | | |
 |---|---|
-| **Intake** | Up to 100 FASTA files per submission, validated in the browser for header structure and IUPAC nucleotide alphabet before upload |
-| **Search** | NCBI BLAST+ 2.17.0 `blastn`, tasks `megablast`, `dc-megablast`, `blastn`; native `-outfmt 15` JSON output |
+| **Intake** | Up to 100 FASTA files per submission, validated for header structure and for the molecule the chosen program requires |
+| **Search** | NCBI BLAST+ 2.17.0 — all five programs: `blastn`, `blastp`, `blastx`, `tblastn`, `tblastx`, with per-program task and word-size validation; native `-outfmt 15` JSON output |
 | **Results** | Sortable and filterable by identity, coverage, E-value, bit score, organism or accession; per-HSP pairwise alignment with matches, mismatches and gaps marked |
 | **Interpretation** | Optional AI summary via the Gemini API — see [Reproducibility notes](#reproducibility-notes) before relying on it |
 | **Export** | Multi-sheet Excel workbook (one sheet per query), landscape PDF report, raw JSON and CSV |
@@ -51,18 +57,34 @@ Every figure below was measured by `blastdbcmd -info` inside the production
 image. Provenance, source URLs and SHA-256 checksums are in
 [docs/DATABASES.md](docs/DATABASES.md).
 
-| Key | Organism | Accession | Assembly | Molecule | Sequences | Total bases |
-|---|---|---|---|---|---|---|
-| `drosophila` | *Drosophila melanogaster* | GCF_000001215.4 | Release 6 plus ISO1 MT | RefSeq RNA | 34,526 | 92,449,215 |
-| `drosophila_genome` | *Drosophila melanogaster* | GCF_000001215.4 | Release 6 plus ISO1 MT | Genomic DNA | 1,870 | 143,726,002 |
-| `ecoli` | *Escherichia coli* K-12 MG1655 | GCF_000005845.2 | ASM584v2 | Genomic DNA | 1 | 4,641,652 |
-| `sarscov2` | SARS-CoV-2 | NC_045512.2 (GCF_009858895.2) | ASM985889v3 | Viral genomic | 1 | 29,903 |
-| `viruses` | SARS-CoV-2 + HIV-1 | NC_045512.2, NC_001802.1 | RefSeq | Viral genomic | 2 | 39,084 |
+| Key | Organism | Accession | Molecule | Sequences | Letters |
+|---|---|---|---|---|---|
+| `drosophila` | *Drosophila melanogaster* | GCF_000001215.4 | RNA | 34,526 | 92,449,215 bases |
+| `drosophila_genome` | *Drosophila melanogaster* | GCF_000001215.4 | Genomic DNA | 1,870 | 143,726,002 bases |
+| `drosophila_protein` | *Drosophila melanogaster* | GCF_000001215.4 | Protein | 30,802 | 20,379,498 residues |
+| `ecoli` | *E. coli* K-12 MG1655 | GCF_000005845.2 | Genomic DNA | 1 | 4,641,652 bases |
+| `ecoli_protein` | *E. coli* K-12 MG1655 | GCF_000005845.2 | Protein | 4,300 | 1,330,036 residues |
+| `yeast_genome` | *S. cerevisiae* S288C | GCF_000146045.2 | Genomic DNA | 17 | 12,157,105 bases |
+| `yeast` | *S. cerevisiae* S288C | GCF_000146045.2 | RNA | 6,138 | 8,873,817 bases |
+| `yeast_protein` | *S. cerevisiae* S288C | GCF_000146045.2 | Protein | 6,021 | 2,933,360 residues |
+| `sarscov2` | SARS-CoV-2 | NC_045512.2 | Viral genomic | 1 | 29,903 bases |
+| `sarscov2_protein` | SARS-CoV-2 | GCF_009858895.2 | Protein | 12 | 14,149 residues |
+| `viruses` | SARS-CoV-2 + HIV-1 | NC_045512.2, NC_001802.1 | Viral genomic | 2 | 39,084 bases |
 
-Each database is built with `makeblastdb -dbtype nucl -parse_seqids -taxid <n>`
+The whole set occupies 386 MB in the image, dominated by NCBI's taxonomy
+tables rather than the sequence indexes.
+
+Each database is built with `makeblastdb -dbtype {nucl|prot} -parse_seqids -taxid <n>`
 and the image carries NCBI's `taxdb`, so every hit resolves to a scientific
 name and taxonomy ID. The build **fails** if any database cannot be opened by
-`blastdbcmd` or does not resolve an organism name.
+`blastdbcmd` or does not resolve an organism name, and CI additionally runs
+one search per program to prove each database is searchable:
+
+```
+blastn    -> ecoli            OK      blastp    -> ecoli_protein    OK
+blastx    -> ecoli_protein    OK      tblastn   -> ecoli            OK
+tblastx   -> sarscov2         OK
+```
 
 The human GRCh38.p14 database is registered but deliberately **disabled**; see
 [Limitations](#limitations).
@@ -121,7 +143,7 @@ configuration are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ```bash
 npm run lint     # must report 0 errors
-npm test         # 108 tests
+npm test         # 130 tests
 npm run build
 ```
 
@@ -132,7 +154,7 @@ browser → Firebase Auth (Google) → ID token
         → Firebase Hosting → Cloud Run (Next.js standalone)
             ├─ requireAuth()  verifies the token server-side
             ├─ assertOwner()  compares job.uid to the verified uid
-            ├─ blastn         spawn(), no shell
+            ├─ BLAST+         spawn(), no shell, program-validated
             ├─ Firestore      job metadata and ownership
             └─ Cloud Storage  result payloads, shared across instances
 ```
@@ -171,7 +193,6 @@ Stated plainly rather than buried:
 - **Job cancellation is best-effort across instances.** A cancel that reaches
   the instance running the search kills the process; one that reaches another
   instance marks the search cancelled and says so explicitly in the response.
-- **Nucleotide searches only.** Protein programs are not wired up.
 - **Result payloads are retained for one year**, then removed by a bucket
   lifecycle rule. Job metadata persists in history.
 - **No published benchmark** against standalone BLAST+ or the NCBI web service.

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { submitNativeBlast, BlastParameterError } from '@/lib/nativeBlast';
 import { startPeriodicCleanup } from '@/lib/cleanupTemp';
-import { checkDatabaseStatus, isSelectable, listSelectableDatabases } from '@/lib/dbManager';
+import { checkDatabaseStatus, isSelectable, listSelectableDatabases, databaseType } from '@/lib/dbManager';
+import { PROGRAM_NAMES, getProgram, isValidProgram, detectSequenceType } from '@/lib/blastPrograms';
 import { putResult, putError } from '@/lib/resultStore';
 import { handle, requireAuth, rateLimit, acquireSlot, releaseSlot, ApiError } from '@/lib/apiAuth';
 import { newRid } from '@/lib/ids';
@@ -61,6 +62,39 @@ export const POST = handle(async (request) => {
       `${(totalBytes / 1024 / 1024).toFixed(1)} MB exceeds the ${MAX_TOTAL_PAYLOAD / 1024 / 1024} MB limit.`);
   }
 
+  // ── Program and database selection ───────────────────────────────────
+  // Resolved before per-file validation, because the program decides which
+  // molecule each uploaded query has to be.
+  const selectedProgram = config?.program || 'blastn';
+  if (!isValidProgram(selectedProgram)) {
+    throw new ApiError(400, `Program "${selectedProgram}" is not supported`,
+      `Available programs: ${PROGRAM_NAMES.join(', ')}.`);
+  }
+  const programSpec = getProgram(selectedProgram);
+  const wantedQueryType = programSpec.queryType;
+
+  const selectedDb = config?.database || (programSpec.dbType === 'prot' ? 'ecoli_protein' : 'drosophila');
+  if (!isSelectable(selectedDb)) {
+    const available = listSelectableDatabases(programSpec.dbType).map((d) => d.name).join(', ');
+    throw new ApiError(400, `Database "${selectedDb}" is not available`,
+      `Databases available for ${selectedProgram}: ${available}.`);
+  }
+
+  const selectedDbType = databaseType(selectedDb);
+  if (selectedDbType !== programSpec.dbType) {
+    const wanted = programSpec.dbType === 'prot' ? 'protein' : 'nucleotide';
+    const got = selectedDbType === 'prot' ? 'protein' : 'nucleotide';
+    const available = listSelectableDatabases(programSpec.dbType).map((d) => d.name).join(', ');
+    throw new ApiError(400, `${selectedProgram} cannot search a ${got} database`,
+      `${selectedProgram} searches ${wanted} databases. Available: ${available}.`);
+  }
+
+  const dbStatus = await checkDatabaseStatus(selectedDb);
+  if (!dbStatus.available) {
+    throw new ApiError(503, `Database "${dbStatus.label}" is not ready`,
+      dbStatus.error || 'The reference database is missing or incompletely indexed on this server.');
+  }
+
   // ── Per-file validation ──────────────────────────────────────────────
   const validSequences = [];
   const validationErrors = [];
@@ -84,13 +118,21 @@ export const POST = handle(async (request) => {
       return fail('The file has a header but no sequence data');
     }
     if (residues.length > MAX_SEQUENCE_LENGTH) {
-      return fail(`Sequence too long (${residues.length.toLocaleString()} bases). Max ${MAX_SEQUENCE_LENGTH.toLocaleString()}.`);
+      const unit = wantedQueryType === 'prot' ? 'residues' : 'bases';
+      return fail(`Sequence too long (${residues.length.toLocaleString()} ${unit}). Max ${MAX_SEQUENCE_LENGTH.toLocaleString()}.`);
     }
-    // blastn needs nucleotides. Catch a protein FASTA here rather than letting
-    // BLAST+ fail several seconds later with an opaque message.
-    const nonNucleotide = residues.replace(/[ACGTURYKMSWBDHVN]/gi, '').length;
-    if (nonNucleotide / residues.length > 0.1) {
-      return fail('This looks like a protein sequence. This deployment runs nucleotide (blastn) searches only.');
+    // Each program requires a particular molecule. Catch a mismatch here
+    // rather than letting BLAST+ fail seconds later with an opaque message.
+    const detected = detectSequenceType(seq.content);
+    if (detected.type !== 'unknown' && detected.type !== wantedQueryType) {
+      const want = wantedQueryType === 'prot' ? 'protein' : 'nucleotide';
+      const got = detected.type === 'prot' ? 'protein' : 'nucleotide';
+      return fail(
+        `${selectedProgram} expects a ${want} query, but this file looks like ${got}. ` +
+        (wantedQueryType === 'prot'
+          ? 'Use blastn, blastx or tblastx for nucleotide queries.'
+          : 'Use blastp or tblastn for protein queries.')
+      );
     }
 
     validSequences.push(seq);
@@ -103,19 +145,6 @@ export const POST = handle(async (request) => {
     );
   }
 
-  // ── Database selection ───────────────────────────────────────────────
-  const selectedDb = config?.database || 'drosophila';
-  if (!isSelectable(selectedDb)) {
-    const available = listSelectableDatabases().map((d) => d.name).join(', ');
-    throw new ApiError(400, `Database "${selectedDb}" is not available`, `Available databases: ${available}.`);
-  }
-
-  const dbStatus = await checkDatabaseStatus(selectedDb);
-  if (!dbStatus.available) {
-    throw new ApiError(503, `Database "${dbStatus.label}" is not ready`,
-      dbStatus.error || 'The reference database is missing or incompletely indexed on this server.');
-  }
-
   // ── Dispatch ─────────────────────────────────────────────────────────
   // One RID per file, generated here and used everywhere: temp filenames,
   // the stored result object, and the value returned to the client.
@@ -125,7 +154,9 @@ export const POST = handle(async (request) => {
 
   const tasks = jobs.map((seq) => async () => {
     try {
-      const result = await submitNativeBlast(seq.content, { ...config, rid: seq.rid });
+      const result = await submitNativeBlast(seq.content, {
+        ...config, program: selectedProgram, database: selectedDb, rid: seq.rid,
+      });
       await putResult(uid, seq.rid, result.data);
     } catch (err) {
       const message = err instanceof BlastParameterError

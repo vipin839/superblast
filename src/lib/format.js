@@ -49,21 +49,41 @@ export function formatDate(dateStr) {
 
 /** Human labels for the four databases the backend actually accepts. */
 /**
- * Static catalogue. `ready` here is only the fallback shown before
- * /api/databases responds — the server's live state always wins.
+ * Static catalogue used for the picker before /api/databases responds; the
+ * server's live state always wins. `type` mirrors the molecule so the UI can
+ * filter to what the chosen program can actually search.
  */
 export const DATABASES = [
-  { value: 'drosophila', label: 'Drosophila melanogaster — RefSeq RNA (GCF_000001215.4)', short: 'D. melanogaster RNA', size: '~24 MB', ready: true },
-  { value: 'drosophila_genome', label: 'Drosophila melanogaster — reference genome (GCF_000001215.4)', short: 'D. melanogaster genome', size: '~44 MB', ready: true },
-  { value: 'ecoli', label: 'Escherichia coli K-12 MG1655 (GCF_000005845.2)', short: 'E. coli K-12', size: '~1.4 MB', ready: true },
-  { value: 'sarscov2', label: 'SARS-CoV-2 — reference genome NC_045512.2', short: 'SARS-CoV-2', size: '~30 kB', ready: true },
-  { value: 'viruses', label: 'Viral set — SARS-CoV-2 and HIV-1', short: 'Viral set', size: '~40 kB', ready: true },
-  { value: 'human', label: 'Human genome GRCh38.p14', short: 'H. sapiens GRCh38', size: '~3.2 GB', ready: false },
+  // Drosophila melanogaster
+  { value: 'drosophila', type: 'nucl', label: 'D. melanogaster — RefSeq RNA (GCF_000001215.4)', short: 'D. melanogaster RNA', size: '~24 MB', ready: true },
+  { value: 'drosophila_genome', type: 'nucl', label: 'D. melanogaster — reference genome (GCF_000001215.4)', short: 'D. melanogaster genome', size: '~44 MB', ready: true },
+  { value: 'drosophila_protein', type: 'prot', label: 'D. melanogaster — proteins (GCF_000001215.4)', short: 'D. melanogaster protein', size: '~9 MB', ready: true },
+  // Escherichia coli K-12 MG1655
+  { value: 'ecoli', type: 'nucl', label: 'E. coli K-12 MG1655 — genome (GCF_000005845.2)', short: 'E. coli genome', size: '~1.4 MB', ready: true },
+  { value: 'ecoli_protein', type: 'prot', label: 'E. coli K-12 MG1655 — proteins (GCF_000005845.2)', short: 'E. coli protein', size: '~0.9 MB', ready: true },
+  // Saccharomyces cerevisiae S288C
+  { value: 'yeast_genome', type: 'nucl', label: 'S. cerevisiae S288C — reference genome (GCF_000146045.2)', short: 'S. cerevisiae genome', size: '~3.7 MB', ready: true },
+  { value: 'yeast', type: 'nucl', label: 'S. cerevisiae S288C — RefSeq RNA (GCF_000146045.2)', short: 'S. cerevisiae RNA', size: '~2.7 MB', ready: true },
+  { value: 'yeast_protein', type: 'prot', label: 'S. cerevisiae S288C — proteins (GCF_000146045.2)', short: 'S. cerevisiae protein', size: '~1.8 MB', ready: true },
+  // SARS-CoV-2
+  { value: 'sarscov2', type: 'nucl', label: 'SARS-CoV-2 — reference genome NC_045512.2', short: 'SARS-CoV-2', size: '~30 kB', ready: true },
+  { value: 'sarscov2_protein', type: 'prot', label: 'SARS-CoV-2 — proteins (GCF_009858895.2)', short: 'SARS-CoV-2 protein', size: '~30 kB', ready: true },
+  // Mixed viral set
+  { value: 'viruses', type: 'nucl', label: 'Viral set — SARS-CoV-2 and HIV-1', short: 'Viral set', size: '~40 kB', ready: true },
+  // Registered but withheld
+  { value: 'human', type: 'nucl', label: 'Human genome GRCh38.p14', short: 'H. sapiens GRCh38', size: '~3.2 GB', ready: false },
 ];
 
 export const dbLabel = (v) => DATABASES.find((d) => d.value === v)?.short || v || '—';
 
+/** Databases a given program can search, filtered by molecule type. */
+export const databasesFor = (dbType) => DATABASES.filter((d) => !dbType || d.type === dbType);
+
 /** blastn tasks the engine supports. Protein programs are not wired up. */
+/**
+ * blastn tasks, kept for existing imports. New code should read the task list
+ * from PROGRAMS in lib/blastPrograms.js, which covers all five programs.
+ */
 export const TASKS = [
   { value: 'megablast', label: 'megablast', desc: 'Highly similar sequences. Fastest, best for same-species matches.' },
   { value: 'dc-megablast', label: 'dc-megablast', desc: 'Discontiguous. Finds more divergent, cross-species matches.' },

@@ -16,83 +16,98 @@ export const DB_DIR = process.env.BLASTDB || (process.env.NODE_ENV === 'producti
  * offered with a "Ready" badge.
  */
 export const DATABASE_REGISTRY = {
+  /* ── Drosophila melanogaster — taxid 7227 ──────────────────────────── */
   drosophila: {
-    name: 'drosophila',
-    label: 'Drosophila melanogaster RefSeq RNA',
-    organism: 'Drosophila melanogaster',
-    source: 'NCBI RefSeq',
-    accession: 'GCF_000001215.4',
-    assembly: 'Release 6 plus ISO1 MT',
-    moleculeType: 'RNA (transcripts)',
-    dbType: 'nucl',
-    bakedIn: true,
-    selectable: true,
+    name: 'drosophila', label: 'D. melanogaster — RefSeq RNA',
+    organism: 'Drosophila melanogaster', taxid: 7227,
+    source: 'NCBI RefSeq', accession: 'GCF_000001215.4', assembly: 'Release 6 plus ISO1 MT',
+    moleculeType: 'RNA (transcripts)', dbType: 'nucl', bakedIn: true, selectable: true,
   },
   drosophila_genome: {
-    name: 'drosophila_genome',
-    label: 'Drosophila melanogaster reference genome',
-    organism: 'Drosophila melanogaster',
-    source: 'NCBI RefSeq',
-    accession: 'GCF_000001215.4',
-    assembly: 'Release 6 plus ISO1 MT',
+    name: 'drosophila_genome', label: 'D. melanogaster — reference genome',
+    organism: 'Drosophila melanogaster', taxid: 7227,
+    source: 'NCBI RefSeq', accession: 'GCF_000001215.4', assembly: 'Release 6 plus ISO1 MT',
     assemblyLevel: 'Chromosome',
-    moleculeType: 'Genomic DNA',
-    dbType: 'nucl',
-    bakedIn: true,
-    selectable: true,
+    moleculeType: 'Genomic DNA', dbType: 'nucl', bakedIn: true, selectable: true,
   },
+  drosophila_protein: {
+    name: 'drosophila_protein', label: 'D. melanogaster — proteins',
+    organism: 'Drosophila melanogaster', taxid: 7227,
+    source: 'NCBI RefSeq', accession: 'GCF_000001215.4', assembly: 'Release 6 plus ISO1 MT',
+    moleculeType: 'Protein', dbType: 'prot', bakedIn: true, selectable: true,
+  },
+
+  /* ── Escherichia coli K-12 MG1655 — taxid 511145 ───────────────────── */
   ecoli: {
-    name: 'ecoli',
-    label: 'Escherichia coli K-12 MG1655',
-    organism: 'Escherichia coli str. K-12 substr. MG1655',
-    source: 'NCBI RefSeq',
-    accession: 'GCF_000005845.2',
-    assembly: 'ASM584v2',
-    moleculeType: 'Genomic DNA',
-    dbType: 'nucl',
-    bakedIn: true,
-    selectable: true,
-  },
-  viruses: {
-    name: 'viruses',
-    label: 'SARS-CoV-2 and HIV-1 reference genomes',
-    organism: 'Severe acute respiratory syndrome coronavirus 2; Human immunodeficiency virus 1',
-    source: 'NCBI Nucleotide',
-    accession: 'NC_045512.2, NC_001802.1',
-    assembly: 'RefSeq reference genomes',
-    moleculeType: 'Viral genomic',
-    dbType: 'nucl',
-    bakedIn: true,
-    selectable: true,
-  },
-  sarscov2: {
-    name: 'sarscov2',
-    label: 'SARS-CoV-2 reference genome',
-    organism: 'Severe acute respiratory syndrome coronavirus 2',
-    source: 'NCBI RefSeq',
-    accession: 'NC_045512.2 (assembly GCF_009858895.2)',
-    assembly: 'ASM985889v3',
+    name: 'ecoli', label: 'E. coli K-12 MG1655 — genome',
+    organism: 'Escherichia coli str. K-12 substr. MG1655', taxid: 511145,
+    source: 'NCBI RefSeq', accession: 'GCF_000005845.2', assembly: 'ASM584v2',
     assemblyLevel: 'Complete genome',
-    moleculeType: 'Viral genomic RNA (cDNA)',
-    dbType: 'nucl',
-    bakedIn: true,
-    selectable: true,
+    moleculeType: 'Genomic DNA', dbType: 'nucl', bakedIn: true, selectable: true,
   },
+  ecoli_protein: {
+    name: 'ecoli_protein', label: 'E. coli K-12 MG1655 — proteins',
+    organism: 'Escherichia coli str. K-12 substr. MG1655', taxid: 511145,
+    source: 'NCBI RefSeq', accession: 'GCF_000005845.2', assembly: 'ASM584v2',
+    moleculeType: 'Protein', dbType: 'prot', bakedIn: true, selectable: true,
+  },
+
+  /* ── Saccharomyces cerevisiae S288C — taxid 559292 ─────────────────── */
+  yeast_genome: {
+    name: 'yeast_genome', label: 'S. cerevisiae S288C — reference genome',
+    organism: 'Saccharomyces cerevisiae S288C', taxid: 559292,
+    source: 'NCBI RefSeq', accession: 'GCF_000146045.2', assembly: 'R64',
+    assemblyLevel: 'Complete genome',
+    moleculeType: 'Genomic DNA', dbType: 'nucl', bakedIn: true, selectable: true,
+  },
+  yeast: {
+    name: 'yeast', label: 'S. cerevisiae S288C — RefSeq RNA',
+    organism: 'Saccharomyces cerevisiae S288C', taxid: 559292,
+    source: 'NCBI RefSeq', accession: 'GCF_000146045.2', assembly: 'R64',
+    moleculeType: 'RNA (transcripts)', dbType: 'nucl', bakedIn: true, selectable: true,
+  },
+  yeast_protein: {
+    name: 'yeast_protein', label: 'S. cerevisiae S288C — proteins',
+    organism: 'Saccharomyces cerevisiae S288C', taxid: 559292,
+    source: 'NCBI RefSeq', accession: 'GCF_000146045.2', assembly: 'R64',
+    moleculeType: 'Protein', dbType: 'prot', bakedIn: true, selectable: true,
+  },
+
+  /* ── SARS-CoV-2 — taxid 2697049 ────────────────────────────────────── */
+  sarscov2: {
+    name: 'sarscov2', label: 'SARS-CoV-2 — reference genome',
+    organism: 'Severe acute respiratory syndrome coronavirus 2', taxid: 2697049,
+    source: 'NCBI RefSeq', accession: 'NC_045512.2 (assembly GCF_009858895.2)',
+    assembly: 'ASM985889v3', assemblyLevel: 'Complete genome',
+    moleculeType: 'Viral genomic RNA (cDNA)', dbType: 'nucl', bakedIn: true, selectable: true,
+  },
+  sarscov2_protein: {
+    name: 'sarscov2_protein', label: 'SARS-CoV-2 — proteins',
+    organism: 'Severe acute respiratory syndrome coronavirus 2', taxid: 2697049,
+    source: 'NCBI RefSeq', accession: 'GCF_009858895.2', assembly: 'ASM985889v3',
+    moleculeType: 'Protein', dbType: 'prot', bakedIn: true, selectable: true,
+  },
+
+  /* ── Mixed viral set, kept for continuity with existing history ────── */
+  viruses: {
+    name: 'viruses', label: 'Viral set — SARS-CoV-2 and HIV-1',
+    organism: 'Severe acute respiratory syndrome coronavirus 2; Human immunodeficiency virus 1',
+    taxid: 2697049,
+    source: 'NCBI Nucleotide', accession: 'NC_045512.2, NC_001802.1',
+    assembly: 'RefSeq reference genomes',
+    moleculeType: 'Viral genomic', dbType: 'nucl', bakedIn: true, selectable: true,
+  },
+
+  /* ── Registered but deliberately unavailable ───────────────────────── */
   human: {
-    name: 'human',
-    label: 'Human genome GRCh38.p14',
-    organism: 'Homo sapiens',
-    source: 'NCBI RefSeq',
-    accession: 'GCF_000001405.40',
-    assembly: 'GRCh38.p14',
-    moleculeType: 'Genomic DNA',
-    dbType: 'nucl',
-    bakedIn: false,
-    // Disabled, honestly. The full assembly is ~3.2 GB expanded and needs a
-    // makeblastdb pass on top of that; the Cloud Run instance has 4 GiB of
-    // RAM-backed writable storage and a 300 s request timeout. Provisioning it
-    // inside a user request cannot succeed, so the option is withdrawn rather
-    // than shown as available and failing every time.
+    name: 'human', label: 'Human genome GRCh38.p14',
+    organism: 'Homo sapiens', taxid: 9606,
+    source: 'NCBI RefSeq', accession: 'GCF_000001405.40', assembly: 'GRCh38.p14',
+    moleculeType: 'Genomic DNA', dbType: 'nucl', bakedIn: false,
+    // The full assembly is ~3.2 GB expanded and needs a makeblastdb pass on
+    // top of that; the Cloud Run instance has 4 GiB of RAM-backed writable
+    // storage and a 300 s request timeout. Withdrawn rather than shown as
+    // available and failing every time.
     selectable: false,
     unavailableReason:
       'The human genome database is not provisioned on this deployment. It requires persistent disk and a pre-built index; ' +
@@ -104,18 +119,36 @@ export const DATABASE_REGISTRY = {
 export const DB_TIMEOUTS = {
   drosophila: 120_000,
   drosophila_genome: 240_000,   // ~144 Mbase assembly
+  drosophila_protein: 180_000,
   ecoli: 120_000,
+  ecoli_protein: 120_000,
+  yeast: 120_000,
+  yeast_genome: 150_000,        // ~12 Mbase assembly
+  yeast_protein: 120_000,
   sarscov2: 60_000,
+  sarscov2_protein: 60_000,
   viruses: 60_000,
   human: 600_000,
 };
 
 /**
- * Index files makeblastdb produces for a BLASTDB v5 nucleotide database.
- * Checking only `.ndb` (as the original code did) reported a half-written or
- * interrupted database as ready.
+ * Translated searches cost far more than the equivalent untranslated one:
+ * blastx translates the query in six frames, tblastn the database, and
+ * tblastx both. Timeouts scale rather than being shared.
  */
-const REQUIRED_EXTENSIONS = ['.ndb', '.nhr', '.nin', '.nsq', '.not', '.ntf', '.nto'];
+export const PROGRAM_TIMEOUT_MULTIPLIER = {
+  blastn: 1, blastp: 1, blastx: 2, tblastn: 3, tblastx: 6,
+};
+
+/**
+ * Index files makeblastdb produces for a BLASTDB v5 database. Nucleotide and
+ * protein databases produce different sets. Checking only `.ndb` (as the
+ * original code did) reported a half-written database as ready.
+ */
+const REQUIRED_EXTENSIONS = {
+  nucl: ['.ndb', '.nhr', '.nin', '.nsq', '.not', '.ntf', '.nto'],
+  prot: ['.pdb', '.phr', '.pin', '.psq', '.pot', '.ptf', '.pto'],
+};
 
 export function getDatabasePath(dbName) {
   const safe = String(dbName).replace(/[^a-zA-Z0-9_-]/g, '');
@@ -129,16 +162,24 @@ export function isSelectable(dbName) {
   return !!DATABASE_REGISTRY[dbName]?.selectable;
 }
 
-export function listSelectableDatabases() {
-  return Object.values(DATABASE_REGISTRY).filter((d) => d.selectable);
+export function listSelectableDatabases(dbType) {
+  return Object.values(DATABASE_REGISTRY)
+    .filter((d) => d.selectable && (!dbType || d.dbType === dbType));
+}
+
+/** Molecule type of a database ('nucl' | 'prot'), or null if unregistered. */
+export function databaseType(dbName) {
+  return DATABASE_REGISTRY[dbName]?.dbType || null;
 }
 
 /** Which of the required index files are present. */
 async function indexFileReport(dbName) {
   const base = getDatabasePath(dbName);
+  const dbType = DATABASE_REGISTRY[dbName]?.dbType === 'prot' ? 'prot' : 'nucl';
+  const required = REQUIRED_EXTENSIONS[dbType];
   const present = [];
   const missing = [];
-  await Promise.all(REQUIRED_EXTENSIONS.map(async (ext) => {
+  await Promise.all(required.map(async (ext) => {
     try {
       const st = await fs.stat(base + ext);
       if (st.size > 0) present.push(ext); else missing.push(ext);
@@ -146,7 +187,7 @@ async function indexFileReport(dbName) {
       missing.push(ext);
     }
   }));
-  return { present: present.sort(), missing: missing.sort() };
+  return { present: present.sort(), missing: missing.sort(), required: required.length };
 }
 
 /**
@@ -157,7 +198,7 @@ export async function inspectDatabase(dbName) {
   const dbPath = getDatabasePath(dbName);
   try {
     const { stdout } = await execFileAsync('blastdbcmd', ['-info', '-db', dbPath], { timeout: 30_000 });
-    const seqMatch = /([\d,]+)\s+sequences;\s+([\d,]+)\s+total bases/i.exec(stdout);
+    const seqMatch = /([\d,]+)\s+sequences;\s+([\d,]+)\s+total (?:bases|residues)/i.exec(stdout);
     const titleMatch = /Database:\s*(.+)/i.exec(stdout);
     const dateMatch = /Date:\s*(.+?)\s{2,}/i.exec(stdout);
     return {
@@ -194,7 +235,7 @@ export async function checkDatabaseStatus(dbName, { deep = false } = {}) {
   }
 
   const files = await indexFileReport(dbName);
-  if (files.missing.length === REQUIRED_EXTENSIONS.length) {
+  if (files.missing.length === files.required) {
     return {
       state: 'NOT_CONFIGURED', available: false, label: info.label,
       // Only a database with a download URL can be fetched. The original

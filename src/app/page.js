@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button, Card, Icons as I, useToast } from '@/components/ui';
 
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 const CONTACT_EMAIL = 'sainivipin839@gmail.com';
 const GITHUB_URL = 'https://github.com/vipin839';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/s-vipin/';
-const DEPLOY_TIME = '2026-09-10 15:23:03 IST';
+const DEPLOY_TIME = '2026-09-10 15:46:29 IST';
 
 /* Every claim below is backed by something the codebase actually does. */
 const FEATURES = [

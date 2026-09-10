@@ -10,7 +10,7 @@
 # Rebuild and push only when a database or the BLAST+ version changes:
 #   gcloud builds submit --config cloudbuild-base.yaml .
 #
-# Tag convention: blast<version>-db<revision>, e.g. blast2.17.0-db3
+# Tag convention: blast<version>-db<revision>, e.g. blast2.17.0-db4
 # ─────────────────────────────────────────────────────────────────────────
 FROM node:20-slim
 
@@ -20,15 +20,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget gzip tar ca-certificates libgomp1 curl coreutils \
     && rm -rf /var/lib/apt/lists/*
 
+# The full BLAST+ bin directory is installed, which provides every search
+# program: blastn, blastp, blastx, tblastn and tblastx, plus makeblastdb,
+# blastdbcmd, the maskers and the profile tools.
 RUN wget -q -O blast.tar.gz \
       "https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/${BLAST_VERSION}/ncbi-blast-${BLAST_VERSION}+-x64-linux.tar.gz" \
  && tar -xzf blast.tar.gz \
  && cp -r "ncbi-blast-${BLAST_VERSION}+/bin/." /usr/local/bin/ \
  && rm -rf blast.tar.gz "ncbi-blast-${BLAST_VERSION}+" \
- && blastn -version && makeblastdb -version && blastdbcmd -version
+ && for b in blastn blastp blastx tblastn tblastx makeblastdb blastdbcmd; do \
+      printf '%-12s ' "$b"; $b -version | head -1; \
+    done
 
 COPY scripts/build-blastdb.sh /usr/local/bin/build-blastdb.sh
-RUN chmod +x /usr/local/bin/build-blastdb.sh
+COPY scripts/verify-blastdbs.sh /usr/local/bin/verify-blastdbs.sh
+RUN chmod +x /usr/local/bin/build-blastdb.sh /usr/local/bin/verify-blastdbs.sh
 
 ENV DBDIR=/app/blastdb
 ENV BLASTDB=/app/blastdb
@@ -47,32 +53,64 @@ RUN cd /app/blastdb \
 # broken database fails the build instead of shipping as "Ready".
 #
 # The trailing number is the NCBI taxonomy ID applied to every sequence.
+# Nucleotide and protein sets are provided for each organism so that all five
+# BLAST programs have a compatible target.
 
-# Drosophila melanogaster — RefSeq transcripts (GCF_000001215.4, Release 6 plus ISO1 MT)
+# ── Drosophila melanogaster (taxid 7227) ──────────────────────────────────
 RUN build-blastdb.sh drosophila \
     "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_rna.fna.gz" \
     "Drosophila melanogaster RefSeq RNA (GCF_000001215.4, Release 6 plus ISO1 MT)" \
     7227
 
-# Drosophila melanogaster — COMPLETE reference genome assembly, same accession
 RUN build-blastdb.sh drosophila_genome \
     "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.fna.gz" \
     "Drosophila melanogaster reference genome (GCF_000001215.4, Release 6 plus ISO1 MT)" \
     7227
 
-# Escherichia coli K-12 MG1655 (GCF_000005845.2, ASM584v2)
+RUN DBTYPE=prot build-blastdb.sh drosophila_protein \
+    "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_protein.faa.gz" \
+    "Drosophila melanogaster RefSeq proteins (GCF_000001215.4, Release 6 plus ISO1 MT)" \
+    7227
+
+# ── Escherichia coli K-12 MG1655 (taxid 511145) ───────────────────────────
 RUN build-blastdb.sh ecoli \
     "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz" \
     "Escherichia coli K-12 MG1655 genome (GCF_000005845.2, ASM584v2)" \
     511145
 
-# SARS-CoV-2 — RefSeq reference assembly ASM985889v3, sequence NC_045512.2
+RUN DBTYPE=prot build-blastdb.sh ecoli_protein \
+    "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_protein.faa.gz" \
+    "Escherichia coli K-12 MG1655 proteins (GCF_000005845.2, ASM584v2)" \
+    511145
+
+# ── Saccharomyces cerevisiae S288C (taxid 559292) ─────────────────────────
+RUN build-blastdb.sh yeast_genome \
+    "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/146/045/GCF_000146045.2_R64/GCF_000146045.2_R64_genomic.fna.gz" \
+    "Saccharomyces cerevisiae S288C reference genome (GCF_000146045.2, R64)" \
+    559292
+
+RUN build-blastdb.sh yeast \
+    "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/146/045/GCF_000146045.2_R64/GCF_000146045.2_R64_rna.fna.gz" \
+    "Saccharomyces cerevisiae S288C RefSeq RNA (GCF_000146045.2, R64)" \
+    559292
+
+RUN DBTYPE=prot build-blastdb.sh yeast_protein \
+    "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/146/045/GCF_000146045.2_R64/GCF_000146045.2_R64_protein.faa.gz" \
+    "Saccharomyces cerevisiae S288C RefSeq proteins (GCF_000146045.2, R64)" \
+    559292
+
+# ── SARS-CoV-2 (taxid 2697049) ────────────────────────────────────────────
 RUN build-blastdb.sh sarscov2 \
     "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/858/895/GCF_009858895.2_ASM985889v3/GCF_009858895.2_ASM985889v3_genomic.fna.gz" \
     "SARS-CoV-2 reference genome NC_045512.2 (GCF_009858895.2, ASM985889v3)" \
     2697049
 
-# Mixed viral set, kept for continuity with searches already in users' history.
+RUN DBTYPE=prot build-blastdb.sh sarscov2_protein \
+    "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/858/895/GCF_009858895.2_ASM985889v3/GCF_009858895.2_ASM985889v3_protein.faa.gz" \
+    "SARS-CoV-2 reference proteins (GCF_009858895.2, ASM985889v3)" \
+    2697049
+
+# ── Mixed viral set, kept for continuity with existing search history ─────
 # Two organisms, so a per-accession taxid map rather than a single taxid:
 #   2697049 = Severe acute respiratory syndrome coronavirus 2
 #     11676 = Human immunodeficiency virus 1
@@ -82,10 +120,8 @@ RUN build-blastdb.sh viruses \
     "SARS-CoV-2 (NC_045512.2) and HIV-1 (NC_001802.1) reference genomes" \
     @/tmp/viruses.taxmap
 
-# Fail the image build if any database cannot be opened, or if its organism
-# name does not resolve — a hit with no scientific name is a defect, not a
-# warning, because the results table and the AI prompt both depend on it.
-COPY scripts/verify-blastdbs.sh /usr/local/bin/verify-blastdbs.sh
-RUN chmod +x /usr/local/bin/verify-blastdbs.sh && verify-blastdbs.sh
+# Fails the build if any database cannot be opened, resolves no organism name,
+# or cannot actually be searched by the programs that target it.
+RUN verify-blastdbs.sh && du -sh /app/blastdb
 
 WORKDIR /app

@@ -10,7 +10,8 @@ import {
   Button, Card, Callout, Field, IconButton, Input, Progress,
   Select, Stepper, Icons as I, useToast,
 } from '@/components/ui';
-import { DATABASES, TASKS, countBases, countSequences, formatBytes } from '@/lib/format';
+import { DATABASES, countBases, countSequences, formatBytes } from '@/lib/format';
+import { PROGRAMS, getProgram } from '@/lib/blastPrograms';
 import { usePref } from '@/lib/prefs';
 import { apiFetch, apiSend, newJobId, ApiClientError } from '@/lib/apiClient';
 
@@ -74,6 +75,27 @@ export default function SearchPage() {
   const [override, setOverride] = useState(null);
   const config = override ?? seed;
   const setConfig = (fn) => setOverride(typeof fn === 'function' ? fn(config) : fn);
+
+  /**
+   * Switching program changes both the legal database set and the legal task
+   * set, so move the selection to something valid instead of leaving an
+   * impossible combination on screen for the server to reject.
+   */
+  const setProgram = (name) => {
+    const spec = getProgram(name);
+    if (!spec) return;
+    setConfig((c) => {
+      const dbStillValid = DATABASES.some((d) => d.value === c.database && d.type === spec.dbType);
+      const firstDb = DATABASES.find((d) => d.type === spec.dbType && d.ready !== false);
+      const taskValues = spec.tasks.map((t) => t.value);
+      return {
+        ...c,
+        program: name,
+        database: dbStillValid ? c.database : (firstDb?.value ?? c.database),
+        task: taskValues.length === 0 ? '' : (taskValues.includes(c.task) ? c.task : spec.defaultTask),
+      };
+    });
+  };
 
   useEffect(() => { if (!loading && !user) router.push('/'); }, [user, loading, router]);
 
@@ -211,8 +233,12 @@ export default function SearchPage() {
     return <AppShell title="New search"><div className="stack g-4"><div className="skeleton" style={{ height: 220, borderRadius: 'var(--r-lg)' }} /></div></AppShell>;
   }
 
-  // Merge the static catalogue with what the server reports right now.
-  const databases = DATABASES.map((d) => {
+  const programSpec = getProgram(config.program) || PROGRAMS.blastn;
+  const programTasks = programSpec.tasks;
+
+  // Only databases of the molecule this program searches, merged with what the
+  // server reports right now.
+  const databases = DATABASES.filter((d) => d.type === programSpec.dbType).map((d) => {
     const live = dbStatus?.find((x) => x.name === d.value);
     if (!live) return d;
     return { ...d, ready: live.available, reason: live.reason, state: live.state };
@@ -316,8 +342,20 @@ export default function SearchPage() {
           <Card pad="lg" className="stack g-5">
             <div>
               <div className="card-title">2 · Search parameters</div>
-              <p className="hint">Defaults suit most nucleotide searches.</p>
+              <p className="hint">{programSpec.summary}</p>
             </div>
+
+            <Field
+              label="BLAST program"
+              htmlFor="program"
+              hint={`${programSpec.queryType === 'prot' ? 'Protein' : 'Nucleotide'} query → ${programSpec.dbType === 'prot' ? 'protein' : 'nucleotide'} database`}
+            >
+              <Select id="program" value={config.program} onChange={(e) => setProgram(e.target.value)}>
+                {Object.values(PROGRAMS).map((p) => (
+                  <option key={p.name} value={p.name}>{p.label} — {p.summary}</option>
+                ))}
+              </Select>
+            </Field>
 
             <Field label="Reference database" htmlFor="db" hint={selectedDb?.ready === false ? (selectedDb.reason || 'This database is not currently available on the server.') : `Indexed and ready · ${selectedDb?.size}`}>
               <Select id="db" value={config.database} onChange={(e) => setConfig((c) => ({ ...c, database: e.target.value }))}>
@@ -329,11 +367,17 @@ export default function SearchPage() {
               </Select>
             </Field>
 
-            <Field label="Search task" htmlFor="task" hint={TASKS.find((t) => t.value === config.task)?.desc}>
-              <Select id="task" value={config.task} onChange={(e) => setConfig((c) => ({ ...c, task: e.target.value }))}>
-                {TASKS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </Select>
-            </Field>
+            {programTasks.length > 0 ? (
+              <Field label="Search task" htmlFor="task" hint={programTasks.find((t) => t.value === config.task)?.desc}>
+                <Select id="task" value={config.task} onChange={(e) => setConfig((c) => ({ ...c, task: e.target.value }))}>
+                  {programTasks.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </Select>
+              </Field>
+            ) : (
+              <Field label="Search task" hint={`${programSpec.label} has no task variants.`}>
+                <Input value="—" readOnly aria-readonly="true" />
+              </Field>
+            )}
 
             <div>
               <Button variant="ghost" size="sm" onClick={() => setShowAdvanced((v) => !v)} aria-expanded={showAdvanced}>
@@ -382,6 +426,7 @@ export default function SearchPage() {
               <div className="row between g-3"><span className="muted">Files</span><span className="mono">{totals.files}</span></div>
               <div className="row between g-3"><span className="muted">Sequences</span><span className="mono">{totals.sequences}</span></div>
               <div className="row between g-3"><span className="muted">Total bases</span><span className="mono">{totals.bases.toLocaleString()}</span></div>
+              <div className="row between g-3"><span className="muted">Program</span><span className="mono">{config.program}</span></div>
               <div className="row between g-3"><span className="muted">Database</span><span className="mono">{config.database}</span></div>
               <div className="row between g-3"><span className="muted">Task</span><span className="mono">{config.task}</span></div>
               <div className="row between g-3"><span className="muted">E-value</span><span className="mono">{config.evalue}</span></div>

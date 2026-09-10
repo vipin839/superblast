@@ -1,41 +1,69 @@
 # BLASTHub — reference databases
 
 Every figure below was **measured** by `blastdbcmd -info` inside the image
-during Cloud Build `40c890f9-2ab7-4ec7-9c2c-27635e5db8f8` on 10 September 2026,
-image tag `blasthub-base:blast2.17.0-db2`, BLAST+ 2.17.0 (build 1 Jul 2025).
+during Cloud Build `faca50b8-77fc-4a86-83a9-455a3fb20ca4` on 10 September 2026,
+image tag `blasthub-base:blast2.17.0-db4`, BLAST+ 2.17.0 (build 1 Jul 2025).
 Nothing here is estimated.
+
+## Programs
+
+All five BLAST+ search programs are installed and verified in CI. Each is
+paired with the molecule of database it can search; the application rejects an
+incompatible pairing before spawning a process.
+
+| Program | Query | Database | Translation |
+|---|---|---|---|
+| `blastn` | nucleotide | nucleotide | none |
+| `blastp` | protein | protein | none |
+| `blastx` | nucleotide | protein | query, 6 frames |
+| `tblastn` | protein | nucleotide | database, 6 frames |
+| `tblastx` | nucleotide | nucleotide | both, 6 frames each |
 
 ## Contents
 
-| Key | Organism | NCBI accession | Assembly | Molecule | Sequences | Total bases | Index on disk |
-|---|---|---|---|---|---|---|---|
-| `drosophila` | *Drosophila melanogaster* | GCF_000001215.4 | Release 6 plus ISO1 MT | RefSeq RNA (transcripts) | 34,526 | 92,449,215 | 31.6 MB |
-| `drosophila_genome` | *Drosophila melanogaster* | GCF_000001215.4 | Release 6 plus ISO1 MT | Genomic DNA | 1,870 | 143,726,002 | 36.4 MB |
-| `ecoli` | *Escherichia coli* K-12 MG1655 | GCF_000005845.2 | ASM584v2 | Genomic DNA | 1 | 4,641,652 | 1.2 MB |
-| `sarscov2` | SARS-CoV-2 | GCF_009858895.2 (NC_045512.2) | ASM985889v3 | Viral genomic | 1 | 29,903 | 57.6 kB |
-| `viruses` | SARS-CoV-2 + HIV-1 | NC_045512.2, NC_001802.1 | RefSeq reference genomes | Viral genomic | 2 | 39,084 | 60.0 kB |
-| `human` | *Homo sapiens* | GCF_000001405.40 | GRCh38.p14 | Genomic DNA | — | — | **not provisioned** |
+Nucleotide and protein sets are provided for each organism, so every program
+has a compatible target.
 
-Cross-checks against published values: E. coli K-12 MG1655 is 4,641,652 bp and
-SARS-CoV-2 NC_045512.2 is 29,903 bp — both match exactly. The *D.
-melanogaster* Release 6 assembly totals 143.7 Mb with a longest sequence of
-32,079,331 bases (chromosome arm 3R).
+| Key | Organism | Accession | Molecule | Sequences | Letters |
+|---|---|---|---|---|---|
+| `drosophila` | *Drosophila melanogaster* | GCF_000001215.4 | RNA | 34,526 | 92,449,215 bases |
+| `drosophila_genome` | *Drosophila melanogaster* | GCF_000001215.4 | Genomic DNA | 1,870 | 143,726,002 bases |
+| `drosophila_protein` | *Drosophila melanogaster* | GCF_000001215.4 | Protein | 30,802 | 20,379,498 residues |
+| `ecoli` | *E. coli* K-12 MG1655 | GCF_000005845.2 | Genomic DNA | 1 | 4,641,652 bases |
+| `ecoli_protein` | *E. coli* K-12 MG1655 | GCF_000005845.2 | Protein | 4,300 | 1,330,036 residues |
+| `yeast_genome` | *S. cerevisiae* S288C | GCF_000146045.2 | Genomic DNA | 17 | 12,157,105 bases |
+| `yeast` | *S. cerevisiae* S288C | GCF_000146045.2 | RNA | 6,138 | 8,873,817 bases |
+| `yeast_protein` | *S. cerevisiae* S288C | GCF_000146045.2 | Protein | 6,021 | 2,933,360 residues |
+| `sarscov2` | SARS-CoV-2 | NC_045512.2 | Viral genomic | 1 | 29,903 bases |
+| `sarscov2_protein` | SARS-CoV-2 | GCF_009858895.2 | Protein | 12 | 14,149 residues |
+| `viruses` | SARS-CoV-2 + HIV-1 | NC_045512.2, NC_001802.1 | Viral genomic | 2 | 39,084 bases |
+| `human` | *Homo sapiens* | GCF_000001405.40 | Genomic DNA | — | **not provisioned** |
+
+Independent cross-checks: *E. coli* K-12 MG1655 is 4,641,652 bp and SARS-CoV-2
+NC_045512.2 is 29,903 bp — both exact. The *S. cerevisiae* R64 assembly has 17
+sequences (16 chromosomes plus the mitochondrion) totalling 12.16 Mb, and
+SARS-CoV-2 encodes 12 annotated proteins. The *D. melanogaster* Release 6
+assembly totals 143.7 Mb, longest sequence 32,079,331 bases (chromosome 3R).
+
+## Size
+
+The database directory is **386 MB**, dominated by NCBI's `taxdb` taxonomy
+tables rather than by the sequence indexes; the eleven databases together
+download as roughly 90 MB of compressed FASTA. It all sits inside the base
+image, so it is fetched once per base-image rebuild and never during an
+application deploy or a user request.
 
 ## Provenance and checksums
 
-Source FASTA, SHA-256 of the downloaded file, and the BLASTDB v5 index size:
-
-| Key | Source URL | FASTA bytes | SHA-256 |
-|---|---|---|---|
-| `drosophila` | `https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_rna.fna.gz` | 96,785,880 | `7514988d48f0cffa9c8ab6490f892bdfc62de8d9bdd415e4ad411908980a1655` |
-| `drosophila_genome` | `…/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.fna.gz` | 145,657,746 | `4e14dbd8ea213a19ebf27057ab62a57ca83951e79ae0c2501ae4c460b7c3d415` |
-| `ecoli` | `https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz` | 4,699,745 | `53bb6a51b6e92139ced1e38f74b7938781027c52200922ff03718c2237d23bb4` |
-| `sarscov2` | `https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/858/895/GCF_009858895.2_ASM985889v3/GCF_009858895.2_ASM985889v3_genomic.fna.gz` | 30,374 | `b0540238e8b48a5ce25dffafb94b1a9be507b161dea2a166d09a9565381f94eb` |
-| `viruses` | `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=NC_045512.2,NC_001802.1&rettype=fasta&retmode=text` | 39,804 | `e6e27489e3b14af67f9d0d5d6a78895055761882193d921331bb1a33207df090` |
-
-The same values are written into the image at
+Source URL, SHA-256 of the downloaded FASTA, record counts and the resulting
+index size are written into the image for every database at
 `/app/blastdb/metadata/<db>.meta.json`, alongside the raw `blastdbcmd -info`
 output at `/app/blastdb/metadata/<db>.info.txt`.
+
+All sources are NCBI RefSeq under
+`https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/...`, except `viruses`, which is
+fetched from NCBI E-utilities by accession. The exact URL for each database is
+declared in `Dockerfile.base`.
 
 ## Taxonomy
 

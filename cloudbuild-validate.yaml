@@ -3,7 +3,7 @@
 # The scripts live in the repository so the checks are reviewable and repeatable.
 substitutions:
   _REPO: us-central1-docker.pkg.dev/super-blast-497610/cloud-run-source-deploy
-  _TAG: blast2.17.0-db3
+  _TAG: blast2.17.0-db4
 steps:
   - name: gcr.io/cloud-builders/docker
     id: blast-validation

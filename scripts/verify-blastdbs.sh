@@ -7,20 +7,30 @@
 # table's Organism column useless and strips taxonomy from the AI prompt, so it
 # is treated as a build failure rather than a warning.
 #
+# Also proves each database is usable by the BLAST programs that target it —
+# an index that opens but cannot be searched is not "ready".
+#
 set -euo pipefail
 
 DB=${DBDIR:-/app/blastdb}
 FAILED=0
 
-for db in drosophila drosophila_genome ecoli sarscov2 viruses; do
-  echo "== verifying ${db} =="
+NUCL_DBS="drosophila drosophila_genome ecoli yeast yeast_genome sarscov2 viruses"
+PROT_DBS="drosophila_protein ecoli_protein yeast_protein sarscov2_protein"
 
-  if ! blastdbcmd -info -db "${DB}/${db}" > /dev/null 2>&1; then
+check() {
+  local db="$1" kind="$2"
+  echo "== ${db} (${kind}) =="
+
+  if ! blastdbcmd -info -db "${DB}/${db}" > /tmp/info.txt 2>&1; then
     echo "   FATAL: blastdbcmd cannot open ${db}" >&2
+    sed 's/^/     /' /tmp/info.txt >&2
     FAILED=1
-    continue
+    return
   fi
+  sed -n '2p' /tmp/info.txt | sed 's/^/   /'
 
+  local name taxid
   name=$(blastdbcmd -db "${DB}/${db}" -entry all -outfmt "%S" 2>/dev/null | head -1 || true)
   taxid=$(blastdbcmd -db "${DB}/${db}" -entry all -outfmt "%T" 2>/dev/null | head -1 || true)
   echo "   organism : ${name:-<none>}"
@@ -34,11 +44,38 @@ for db in drosophila drosophila_genome ecoli sarscov2 viruses; do
     echo "   FATAL: ${db} reports taxid 0; makeblastdb was run without -taxid" >&2
     FAILED=1
   fi
-done
+}
+
+for db in $NUCL_DBS; do check "$db" nucleotide; done
+for db in $PROT_DBS; do check "$db" protein; done
+
+# ── Prove each program can actually search the databases it targets ────────
+echo
+echo "== program/database compatibility =="
+printf '>n\nATGGCTAGCTAGCTAGCATCGATCGATCGTAGCTAGCTAGCATCGATCGATCGTAGCTAGC\n' > /tmp/n.fa
+printf '>p\nMKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPILSRVGDGTQDNLSGAEKAVQVKVKA\n' > /tmp/p.fa
+
+run() {
+  local prog="$1" query="$2" db="$3"
+  printf "   %-9s -> %-20s " "$prog" "$db"
+  if $prog -query "$query" -db "${DB}/${db}" -outfmt 6 -evalue 10 -max_target_seqs 5 \
+       > /tmp/out.txt 2>/tmp/err.txt; then
+    echo "OK ($(wc -l < /tmp/out.txt) hits)"
+  else
+    echo "FAILED"; sed 's/^/       /' /tmp/err.txt >&2; FAILED=1
+  fi
+}
+
+run blastn  /tmp/n.fa ecoli
+run blastp  /tmp/p.fa ecoli_protein
+run blastx  /tmp/n.fa ecoli_protein
+run tblastn /tmp/p.fa ecoli
+run tblastx /tmp/n.fa sarscov2
 
 if [ "${FAILED}" -ne 0 ]; then
   echo "One or more BLAST databases failed verification." >&2
   exit 1
 fi
 
-echo "All BLAST databases verified, with taxonomy."
+echo
+echo "All BLAST databases verified, with taxonomy, across all five programs."

@@ -1,9 +1,15 @@
 import { execFile, spawn } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
-import { ensureDatabase, getDatabasePath, DB_TIMEOUTS } from './dbManager';
+import {
+  ensureDatabase, getDatabasePath, databaseType,
+  DB_TIMEOUTS, PROGRAM_TIMEOUT_MULTIPLIER,
+} from './dbManager';
 import { cleanupFiles, getTempDir } from './cleanupTemp';
 import { isValidRid, newRid } from './ids';
+import {
+  PROGRAM_NAMES, MATRICES, getProgram, isValidProgram, tasksFor, wordSizeRange,
+} from './blastPrograms';
 
 /**
  * Native NCBI BLAST+ execution.
@@ -20,9 +26,6 @@ import { isValidRid, newRid } from './ids';
  */
 
 const MAX_BUFFER = 100 * 1024 * 1024; // 100 MB of BLAST JSON
-
-const VALID_TASKS = ['megablast', 'dc-megablast', 'blastn'];
-const VALID_PROGRAMS = ['blastn'];
 
 /**
  * Live child processes, keyed by RID, so a cancel request can actually kill
@@ -59,18 +62,49 @@ export function cancelBlast(rid) {
   return 'killed';
 }
 
-function validateParams({ program, task, evalue, maxTargetSeqs, wordSize }) {
+function validateParams({ program, task, evalue, maxTargetSeqs, wordSize, database, matrix }) {
   const errors = [];
 
-  const safeProgram = VALID_PROGRAMS.includes(program) ? program : 'blastn';
-  if (program && !VALID_PROGRAMS.includes(program)) {
-    errors.push(`Program "${program}" is not supported. This deployment runs nucleotide searches (blastn) only.`);
+  const safeProgram = isValidProgram(program) ? program : 'blastn';
+  if (program && !isValidProgram(program)) {
+    errors.push(`Program "${program}" is not supported. Available: ${PROGRAM_NAMES.join(', ')}.`);
+  }
+  const spec = getProgram(safeProgram);
+
+  // The program decides which molecule of database it can search. Catching a
+  // mismatch here gives a sentence the user can act on, instead of BLAST+
+  // failing several seconds later with "Protein BLAST database was expected".
+  if (database) {
+    const dbType = databaseType(database);
+    if (dbType && dbType !== spec.dbType) {
+      const wanted = spec.dbType === 'prot' ? 'protein' : 'nucleotide';
+      const got = dbType === 'prot' ? 'protein' : 'nucleotide';
+      errors.push(
+        `${safeProgram} searches a ${wanted} database, but "${database}" is a ${got} database. ` +
+        `Choose a ${wanted} database, or a program that searches ${got} databases.`
+      );
+    }
   }
 
-  const safeTask = VALID_TASKS.includes(task) ? task : 'megablast';
-  if (task && !VALID_TASKS.includes(task)) {
-    errors.push(`Task "${task}" is not valid for blastn. Choose one of: ${VALID_TASKS.join(', ')}.`);
+  // tblastx takes no -task argument at all.
+  const allowedTasks = tasksFor(safeProgram);
+  let safeTask = null;
+  if (allowedTasks.length > 0) {
+    safeTask = allowedTasks.includes(task) ? task : spec.defaultTask;
+    if (task && !allowedTasks.includes(task)) {
+      errors.push(`Task "${task}" is not valid for ${safeProgram}. Choose one of: ${allowedTasks.join(', ')}.`);
+    }
+  } else if (task) {
+    errors.push(`${safeProgram} does not take a task option.`);
   }
+
+  if (matrix && !spec.supportsMatrix) {
+    errors.push(`${safeProgram} does not use a scoring matrix.`);
+  }
+  if (matrix && spec.supportsMatrix && !MATRICES.includes(matrix)) {
+    errors.push(`Scoring matrix "${matrix}" is not available. Choose one of: ${MATRICES.join(', ')}.`);
+  }
+  const safeMatrix = spec.supportsMatrix && MATRICES.includes(matrix) ? matrix : null;
 
   const ev = Number(evalue);
   if (evalue !== undefined && (!Number.isFinite(ev) || ev <= 0 || ev > 1000)) {
@@ -84,20 +118,21 @@ function validateParams({ program, task, evalue, maxTargetSeqs, wordSize }) {
   }
   const safeMaxTargets = Number.isInteger(mts) && mts >= 1 && mts <= 5000 ? String(mts) : '50';
 
-  // Word size has task-specific minimums in BLAST+; reject rather than let
-  // blastn fail with a cryptic message.
+  // Word size minimums are program- and task-specific in BLAST+; reject here
+  // rather than let the process fail with a cryptic usage dump.
   let safeWordSize = null;
   if (wordSize !== undefined && wordSize !== null && wordSize !== '') {
     const ws = parseInt(wordSize, 10);
-    const min = safeTask === 'blastn' ? 4 : safeTask === 'dc-megablast' ? 11 : 16;
-    if (!Number.isInteger(ws) || ws < min || ws > 64) {
-      errors.push(`Word size for ${safeTask} must be between ${min} and 64.`);
+    const range = wordSizeRange(safeProgram, safeTask);
+    const [min, max] = range || [2, 64];
+    if (!Number.isInteger(ws) || ws < min || ws > max) {
+      errors.push(`Word size for ${safeTask || safeProgram} must be between ${min} and ${max}.`);
     } else {
       safeWordSize = String(ws);
     }
   }
 
-  return { errors, safeProgram, safeTask, safeEvalue, safeMaxTargets, safeWordSize };
+  return { errors, safeProgram, safeTask, safeEvalue, safeMaxTargets, safeWordSize, safeMatrix };
 }
 
 export class BlastParameterError extends Error {}
@@ -116,11 +151,11 @@ export async function submitNativeBlast(query, options = {}) {
   // temp files from the result the API later looks for.
   const rid = isValidRid(options.rid) ? options.rid : newRid();
 
-  const { errors, safeProgram, safeTask, safeEvalue, safeMaxTargets, safeWordSize } =
-    validateParams(options);
-  if (errors.length) throw new BlastParameterError(errors.join(' '));
-
   const safeDatabase = String(database).replace(/[^a-zA-Z0-9_-]/g, '');
+
+  const { errors, safeProgram, safeTask, safeEvalue, safeMaxTargets, safeWordSize, safeMatrix } =
+    validateParams({ ...options, database: safeDatabase });
+  if (errors.length) throw new BlastParameterError(errors.join(' '));
 
   const tempDir = getTempDir();
   const queryFile = path.join(tempDir, `query_${rid}.fasta`);
@@ -129,11 +164,13 @@ export async function submitNativeBlast(query, options = {}) {
   // Throws with a clear message if the database is missing or not indexed.
   await ensureDatabase(safeDatabase);
   const dbPath = getDatabasePath(safeDatabase);
-  const timeout = DB_TIMEOUTS[safeDatabase] || 300_000;
+  // Translated searches are much slower, so the per-database budget is scaled
+  // by the program rather than shared across all five.
+  const timeout = (DB_TIMEOUTS[safeDatabase] || 300_000)
+    * (PROGRAM_TIMEOUT_MULTIPLIER[safeProgram] || 1);
   const numThreads = '2';
 
   const args = [
-    '-task', safeTask,
     '-query', queryFile,
     '-db', dbPath,
     '-out', outFile,
@@ -142,7 +179,10 @@ export async function submitNativeBlast(query, options = {}) {
     '-max_target_seqs', safeMaxTargets,
     '-num_threads', numThreads,
   ];
+  // tblastx accepts no -task argument.
+  if (safeTask) args.unshift('-task', safeTask);
   if (safeWordSize) args.push('-word_size', safeWordSize);
+  if (safeMatrix) args.push('-matrix', safeMatrix);
 
   try {
     await fs.mkdir(tempDir, { recursive: true });

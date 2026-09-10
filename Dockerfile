@@ -9,7 +9,7 @@
 # Cache invalidation: change BASE_TAG to pick up a new engine or database set.
 # ─────────────────────────────────────────────────────────────────────────
 ARG BASE_IMAGE=us-central1-docker.pkg.dev/super-blast-497610/cloud-run-source-deploy/blasthub-base
-ARG BASE_TAG=blast2.17.0-db3
+ARG BASE_TAG=blast2.17.0-db4
 
 FROM ${BASE_IMAGE}:${BASE_TAG} AS base
 WORKDIR /app
