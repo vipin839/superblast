@@ -1,0 +1,45 @@
+# Builds the expensive BLAST+ / reference-database base image.
+# Run this only when a database definition or the BLAST+ version changes.
+#   gcloud builds submit --config cloudbuild-base.yaml .
+substitutions:
+  _REPO: us-central1-docker.pkg.dev/super-blast-497610/cloud-run-source-deploy
+  _TAG: blast2.17.0-db3
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.base
+      - -t
+      - ${_REPO}/blasthub-base:${_TAG}
+      - -t
+      - ${_REPO}/blasthub-base:latest
+      - .
+  # Prove the databases work inside the image that was just built.
+  - name: gcr.io/cloud-builders/docker
+    id: validate
+    args:
+      - run
+      - --rm
+      - ${_REPO}/blasthub-base:${_TAG}
+      - bash
+      - -lc
+      - |
+        set -e
+        echo "=== BLAST+ versions ==="
+        blastn -version; makeblastdb -version; blastdbcmd -version
+        which blastn makeblastdb blastdbcmd
+        echo
+        for db in drosophila drosophila_genome ecoli sarscov2 viruses; do
+          echo "=== blastdbcmd -info -db $db ==="
+          blastdbcmd -info -db /app/blastdb/$db
+          echo "--- metadata ---"; cat /app/blastdb/metadata/$db.meta.json
+          echo
+        done
+images:
+  - ${_REPO}/blasthub-base:${_TAG}
+  - ${_REPO}/blasthub-base:latest
+options:
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY
+timeout: 2400s

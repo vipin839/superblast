@@ -1,0 +1,20 @@
+# End-to-end BLAST engine validation inside the real runtime image.
+#   gcloud builds submit --config cloudbuild-validate.yaml .
+# The scripts live in the repository so the checks are reviewable and repeatable.
+substitutions:
+  _REPO: us-central1-docker.pkg.dev/super-blast-497610/cloud-run-source-deploy
+  _TAG: blast2.17.0-db3
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: blast-validation
+    args:
+      - run
+      - --rm
+      - -v
+      - /workspace:/w
+      - ${_REPO}/blasthub-base:${_TAG}
+      - bash
+      - /w/scripts/validate-blast.sh
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1800s

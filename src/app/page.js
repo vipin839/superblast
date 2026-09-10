@@ -1,0 +1,226 @@
+'use client';
+
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Button, Card, Icons as I, useToast } from '@/components/ui';
+
+const CONTACT_EMAIL = 'sainivipin839@gmail.com';
+const GITHUB_URL = 'https://github.com/vipin839';
+const LINKEDIN_URL = 'https://www.linkedin.com/in/s-vipin/';
+const DEPLOY_TIME = '2026-09-10 13:11:30 IST';
+
+/* Every claim below is backed by something the codebase actually does. */
+const FEATURES = [
+  {
+    icon: I.Upload,
+    title: 'Bulk FASTA intake',
+    body: 'Drop in up to 100 files at once. Headers and the IUPAC nucleotide alphabet are checked in the browser before anything is uploaded, so malformed sequences fail immediately rather than halfway through a run.',
+  },
+  {
+    icon: I.Cloud,
+    title: 'Managed BLAST+ 2.17.0',
+    body: 'Searches execute against the genuine NCBI BLAST+ binary on dedicated infrastructure — not a reimplementation, and not queued behind the public NCBI service.',
+  },
+  {
+    icon: I.Database,
+    title: 'Pre-indexed references',
+    body: 'Drosophila melanogaster RNA, E. coli K-12 MG1655 and curated viral genomes ship indexed and ready, so the first query runs without a build step.',
+  },
+  {
+    icon: I.Table,
+    title: 'Results you can interrogate',
+    body: 'Sort and filter by identity, coverage, E-value, bit score, organism or accession. Open any hit for the pairwise alignment with matches, mismatches and gaps marked.',
+  },
+  {
+    icon: I.Sparkle,
+    title: 'AI interpretation',
+    body: 'Gemini 2.5 Pro reads the hit table and writes up taxonomy, identity brackets and functional inference. When it is unavailable a deterministic local summary runs instead.',
+  },
+  {
+    icon: I.Doc,
+    title: 'Reports and raw data',
+    body: 'Export a multi-sheet Excel workbook, a landscape PDF, or the raw JSON and CSV — whichever your downstream pipeline or manuscript needs.',
+  },
+];
+
+const FLOW = [
+  { n: '01', t: 'Upload', d: 'Drag in FASTA files. Format is validated before submission.' },
+  { n: '02', t: 'Configure', d: 'Pick a database, task, E-value threshold and hit limit.' },
+  { n: '03', t: 'Search', d: 'Batches run concurrently on the BLAST+ engine.' },
+  { n: '04', t: 'Analyse', d: 'Read alignments, filter hits, request AI interpretation.' },
+  { n: '05', t: 'Report', d: 'Export to Excel, PDF, JSON or CSV.' },
+];
+
+export default function HomePage() {
+  const { user, loading, signInWithGoogle } = useAuth();
+  const router = useRouter();
+  const toast = useToast();
+
+  useEffect(() => {
+    if (user) router.push('/dashboard');
+  }, [user, router]);
+
+  /**
+   * signInWithGoogle rejects on a cancelled popup. Closing the window is a
+   * normal thing to do, not an error, so only surface the real failures.
+   */
+  async function signIn() {
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      const code = err?.code || '';
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+      toast('Could not sign in', {
+        tone: 'error',
+        desc: code === 'auth/popup-blocked'
+          ? 'Your browser blocked the sign-in popup. Allow popups for this site and try again.'
+          : 'Something went wrong reaching Google. Please try again.',
+      });
+    }
+  }
+
+  return (
+    <>
+      <header className="mk-nav">
+        <div className="mk mk-nav-inner">
+          <div className="row g-3">
+            <span className="brand-mark"><I.Helix /></span>
+            <span className="brand-word">BLAST<em>Hub</em></span>
+          </div>
+          <Button variant="primary" size="sm" onClick={signIn} disabled={loading}>
+            <I.Google /> Sign in
+          </Button>
+        </div>
+      </header>
+
+      <main>
+        <section className="mk">
+          <div className="mk-hero">
+            <span className="mk-eyebrow"><I.Helix /> NCBI BLAST+ 2.17.0 · managed infrastructure</span>
+            <h1 className="mk-title">Sequence analysis, <strong>without the setup.</strong></h1>
+            <p className="mk-lede">
+              Upload a hundred FASTA files, run them against pre-indexed reference databases,
+              and read the alignments in a workspace built for the results — not for the queue.
+            </p>
+            <div className="mk-cta">
+              <Button variant="primary" size="lg" onClick={signIn} disabled={loading}>
+                <I.Google /> Start analysing
+              </Button>
+              <Button
+                as="a"
+                variant="secondary"
+                size="lg"
+                href="https://blast.ncbi.nlm.nih.gov/doc/blast-help/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Learn about BLAST <I.External />
+              </Button>
+            </div>
+            <div className="mk-strip">
+              <span className="mk-chip"><span className="mono">100</span> files per search</span>
+              <span className="mk-chip"><span className="mono">blastn</span> megablast · dc-megablast</span>
+              <span className="mk-chip"><span className="mono">4</span> reference databases</span>
+              <span className="mk-chip"><span className="mono">JSON-15</span> native output</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="mk mk-section">
+          <div className="mk-section-head">
+            <h2 className="mk-h2">Built for the whole run, not just the search</h2>
+            <p className="mk-lede" style={{ fontSize: 'var(--t-md)' }}>
+              Everything between a folder of sequences and a figure you can publish.
+            </p>
+          </div>
+          <div className="mk-features">
+            {FEATURES.map((f) => (
+              <Card key={f.title} className="mk-feature">
+                <span className="mk-feature-icon"><f.icon /></span>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        <section className="mk mk-section" style={{ paddingTop: 0 }}>
+          <div className="mk-section-head">
+            <h2 className="mk-h2">Five steps, start to finish</h2>
+          </div>
+          <div className="mk-flow">
+            {FLOW.map((s) => (
+              <Card key={s.n} className="mk-flow-step">
+                <span className="mk-flow-n">{s.n}</span>
+                <h3>{s.t}</h3>
+                <p>{s.d}</p>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        <section className="mk mk-section" style={{ paddingTop: 0 }}>
+          <div className="grid-2">
+            <Card className="mk-feature">
+              <span className="mk-feature-icon"><I.Shield /></span>
+              <h3>Your data stays in one project</h3>
+              <p>
+                Sequences are processed on infrastructure inside a single Google Cloud project and are
+                never sent to third-party BLAST services. Sign-in is handled by Firebase Authentication.
+              </p>
+            </Card>
+            <Card className="mk-feature">
+              <span className="mk-feature-icon"><I.Clock /></span>
+              <h3>Working files are swept hourly</h3>
+              <p>
+                Temporary query and result files are deleted an hour after a run completes. Search
+                metadata and hit tables stay in your history until you delete them yourself.
+              </p>
+            </Card>
+          </div>
+        </section>
+
+        <section className="mk mk-section" style={{ paddingTop: 0 }}>
+          <div className="card-inv mk-cta-band">
+            <h2 className="mk-h2" style={{ color: 'var(--fg-inv)' }}>Run your first search</h2>
+            <p style={{ color: 'var(--fg-inv-2)', maxWidth: '52ch' }}>
+              Sign in with Google and upload a FASTA file. There is nothing to install and no cluster to provision.
+            </p>
+            <Button variant="primary" size="lg" onClick={signIn} disabled={loading}>
+              <I.Google /> Start analysing
+            </Button>
+          </div>
+        </section>
+      </main>
+
+      <footer className="mk-foot">
+        <div className="mk mk-foot-inner">
+          <div className="stack g-2">
+            <div className="row g-3">
+              <span className="brand-mark"><I.Helix /></span>
+              <span className="brand-word">BLAST<em>Hub</em></span>
+            </div>
+            <p className="mk-legal">
+              Built on NCBI BLAST+ and Google Cloud Platform.<br />
+              BLAST® is a registered trademark of the National Library of Medicine.
+            </p>
+            <p className="mk-legal mono">Last deployed: {DEPLOY_TIME}</p>
+          </div>
+
+          <div className="mk-foot-links">
+            <a className="mk-foot-link" href={`mailto:${CONTACT_EMAIL}`}>
+              <I.Mail /> {CONTACT_EMAIL}
+            </a>
+            <a className="mk-foot-link" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+              <I.Github /> GitHub
+            </a>
+            <a className="mk-foot-link" href={LINKEDIN_URL} target="_blank" rel="noopener noreferrer">
+              <I.Linkedin /> LinkedIn
+            </a>
+          </div>
+        </div>
+      </footer>
+    </>
+  );
+}

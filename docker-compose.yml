@@ -1,0 +1,32 @@
+services:
+  blasthub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+      - NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyCRV5MYcjju-yrM9Mk2OKY9ccpCZbrrtTc
+      - NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=super-blast-497610.firebaseapp.com
+      - NEXT_PUBLIC_FIREBASE_PROJECT_ID=super-blast-497610
+      - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=super-blast-497610.firebasestorage.app
+      - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=523316980019
+      - NEXT_PUBLIC_FIREBASE_APP_ID=1:523316980019:web:0731b2eeab462cd9e7b646
+    volumes:
+      - blast_data:/app/blastdb
+      - blast_temp:/app/temp_queries
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/blast/test"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  blast_data:
+  blast_temp:

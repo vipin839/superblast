@@ -1,0 +1,24 @@
+# Build context exclusions for `gcloud builds submit`.
+# The Dockerfile only needs: package*.json, next.config.mjs, jsconfig.json,
+# eslint.config.mjs, src/, public/. Everything below is dead weight or secret.
+.git
+.gitignore
+node_modules
+.next
+.firebase
+
+# Secrets — never ship into the build context
+.env
+.env.*
+!.env.example
+
+# Legacy prototype (~275MB: .venv, sqlite db, dist bundles) — not used by the build
+old_version_backup
+
+# Local-only archives, tests and scratch
+*.tgz
+e2e
+logs.json
+test_api.js
+test_ncbi.cjs
+test_ncbi.mjs

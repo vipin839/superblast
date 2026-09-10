@@ -1,0 +1,62 @@
+# ── Dependencies ─────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── Next.js build output and caches ──────────────────────────────────────
+# .next/cache and .next/dev/cache hold Turbopack .sst files that reach
+# hundreds of megabytes and exceed GitHub's 100 MB per-file limit.
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+
+# ── Secrets — never commit any of these ──────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+id_rsa*
+**/credentials.json
+**/service-account*.json
+**/*-key.json
+
+# ── Archived prototype (~275 MB: .venv, sqlite, dist bundles) ────────────
+old_version_backup/
+_snapshots/
+
+# ── Local scratch and generated artifacts ────────────────────────────────
+*.tgz
+*.log
+logs.json
+coverage/
+.vitest/
+blastdb/
+temp_queries/
+*.fna
+*.nhr
+*.nin
+*.nsq
+*.ndb
+*.not
+*.ntf
+*.nto
+
+# ── Firebase / cloud tooling local state ─────────────────────────────────
+.firebase/
+
+# ── Python (legacy backend tooling) ──────────────────────────────────────
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# ── OS / editor ──────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

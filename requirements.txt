@@ -1,0 +1,14 @@
+fastapi
+python-multipart
+uvicorn
+sqlalchemy
+pydantic
+python-dotenv
+boto3
+# For GCS support (optional, only if using GCP)
+google-cloud-storage
+# For database
+aiosqlite
+# For testing
+pytest
+httpx

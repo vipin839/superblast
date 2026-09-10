@@ -1,0 +1,22 @@
+# Build-context exclusions. Anything here is unreachable from the image.
+.git
+.gitignore
+node_modules
+.next
+.firebase
+npm-debug.log
+Dockerfile
+Dockerfile.base
+.dockerignore
+
+# Secrets must never enter an image layer.
+.env
+.env.*
+
+# Archived code and local scratch
+old_version_backup
+e2e
+tests
+logs.json
+*.tgz
+docs
