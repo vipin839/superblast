@@ -3,6 +3,7 @@
 **Bulk sequence search on managed NCBI BLAST+ infrastructure — all five BLAST
 programs, with interactive alignment inspection and publication-ready export.**
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22688703.svg)](https://doi.org/10.5281/zenodo.22688703)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![BLAST+](https://img.shields.io/badge/NCBI%20BLAST%2B-2.17.0-informational.svg)](https://blast.ncbi.nlm.nih.gov/)
 
@@ -199,8 +200,19 @@ Stated plainly rather than buried:
 
 ## Citing
 
-If this software contributes to work you publish, please cite it using the
-metadata in [CITATION.cff](CITATION.cff), and cite BLAST+ itself:
+Archived on Zenodo. Cite the **concept DOI**, which always resolves to the
+most recent version:
+
+> Saini, V. BLASTHub: bulk sequence search on managed NCBI BLAST+
+> infrastructure. Zenodo. https://doi.org/10.5281/zenodo.22688703
+
+| DOI | Resolves to |
+|---|---|
+| [`10.5281/zenodo.22688703`](https://doi.org/10.5281/zenodo.22688703) | All versions — **use this in papers** |
+| [`10.5281/zenodo.22688705`](https://doi.org/10.5281/zenodo.22688705) | v2.1.1 specifically |
+
+Machine-readable metadata is in [CITATION.cff](CITATION.cff). Please also cite
+BLAST+ itself:
 
 > Camacho C, Coulouris G, Avagyan V, Ma N, Papadopoulos J, Bealer K, Madden TL.
 > BLAST+: architecture and applications. *BMC Bioinformatics*. 2009;10:421.
