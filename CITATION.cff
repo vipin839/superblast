@@ -26,7 +26,7 @@ keywords:
   - genomics
   - web application
 license: MIT
-version: 2.1.1
+version: 2.1.2
 date-released: "2026-09-10"
 
 # Concept DOI: always resolves to the newest archived version. This is the one
