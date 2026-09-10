@@ -21,8 +21,11 @@ export async function cleanupOldFiles(directory, maxAgeMs = DEFAULT_MAX_AGE_MS) 
     const now = Date.now();
 
     for (const file of files) {
-      // Only clean up BLAST temp files (query_, out_, final_, error_)
-      if (!file.match(/^(query_|out_|final_|error_|diag_)/)) {
+      // Only the transient files BLAST+ needs. `final_`/`error_` are legacy:
+      // completed results now live in Cloud Storage, not on this filesystem.
+      // They stay in the pattern so that any left over from an older revision
+      // are still swept up.
+      if (!file.match(/^(query_|out_|diag_|probe_|final_|error_)/)) {
         stats.skipped++;
         continue;
       }

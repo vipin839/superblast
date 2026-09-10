@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Super BLAST / BLASTHub — Firestore security rules
+//
+// This application performs ALL Firestore access server-side through the
+// Firebase Admin SDK, which bypasses these rules by design. Every read and
+// write is therefore already gated by requireAuth() and assertOwner() in
+// src/lib/apiAuth.js.
+//
+// These rules exist to make that architecture explicit and enforced: the
+// browser must never reach Firestore directly, so client access to this
+// project's collections is denied outright. Without a version-controlled
+// file, the deployed rules were inherited from an unrelated application and
+// nothing in this repository managed them.
+//
+// Deploy with:  npx firebase-tools deploy --only firestore:rules
+// ─────────────────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny. Anything not matched below is unreachable from a client.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Search metadata. Written and read exclusively by the API using the
+    // Admin SDK; a browser has no legitimate reason to touch these.
+    match /jobs/{jobId} {
+      allow read, write: if false;
+    }
+
+    // Per-user job subcollection, same reasoning.
+    match /users/{userId}/jobs/{jobId} {
+      allow read, write: if false;
+    }
+    match /users/{userId} {
+      allow read, write: if false;
+    }
+  }
+}

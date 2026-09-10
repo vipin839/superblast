@@ -19,7 +19,7 @@ export function exportPDF(jobData, hits, aiAnalysis) {
   const margin = 14;
 
   // ── Header ──
-  doc.setFillColor(10, 14, 26);
+  doc.setFillColor(18, 26, 43);   // --surface-inv
   doc.rect(0, 0, pageWidth, 35, 'F');
 
   doc.setTextColor(241, 245, 249);
@@ -97,13 +97,13 @@ export function exportPDF(jobData, hits, aiAnalysis) {
       lineWidth: 0.1,
     },
     headStyles: {
-      fillColor: [124, 58, 237],
+      fillColor: [12, 99, 96],        // --accent
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       fontSize: 7,
     },
     alternateRowStyles: {
-      fillColor: [245, 245, 250],
+      fillColor: [241, 244, 249],     // --surface-2
     },
     columnStyles: {
       3: { halign: 'right' },
@@ -115,7 +115,7 @@ export function exportPDF(jobData, hits, aiAnalysis) {
       9: { halign: 'right' },
     },
     margin: { left: margin, right: margin },
-    didDrawPage: (data) => {
+    didDrawPage: () => {
       // Footer on each page
       doc.setFontSize(7);
       doc.setTextColor(150, 150, 150);

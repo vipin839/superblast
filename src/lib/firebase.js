@@ -1,6 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyCRV5MYcjju-yrM9Mk2OKY9ccpCZbrrtTc',
@@ -22,5 +21,9 @@ try {
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
+// No client-side Firestore export. All Firestore access happens server-side
+// through the Admin SDK in src/lib/firestoreJobs.js, gated by requireAuth()
+// and assertOwner(). Initialising the client SDK here shipped the whole
+// Firestore bundle to every visitor and offered a direct path to the database
+// that the API layer does not control. firestore.rules denies it regardless.
 export default app;

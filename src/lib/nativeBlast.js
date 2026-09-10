@@ -1,4 +1,4 @@
-import { execFile, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import {
@@ -24,8 +24,6 @@ import {
  *    RID for the result filename and this module generated a *different* one
  *    for its temp files, so the two never referred to the same search.
  */
-
-const MAX_BUFFER = 100 * 1024 * 1024; // 100 MB of BLAST JSON
 
 /**
  * Live child processes, keyed by RID, so a cancel request can actually kill
@@ -377,5 +375,3 @@ export function parseBlastJSON(data) {
 
   return results;
 }
-
-export { MAX_BUFFER, execFile };

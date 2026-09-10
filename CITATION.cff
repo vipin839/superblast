@@ -3,8 +3,9 @@ title: "BLASTHub: bulk nucleotide sequence search on managed NCBI BLAST+ infrast
 message: "If you use this software in work you publish, please cite it using these metadata."
 type: software
 authors:
+  # Mononym: recorded with given-names only. CFF 1.2.0 allows a person with a
+  # single name; adding a family-names field would invent a surname.
   - given-names: Vipin
-    family-names: Saini
     email: sainivipin839@gmail.com
     orcid: "https://orcid.org/0009-0005-2924-7095"
 repository-code: "https://github.com/vipin839/superblast"
