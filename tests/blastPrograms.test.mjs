@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   PROGRAMS, PROGRAM_NAMES, MATRICES,
   getProgram, isValidProgram, programAcceptsDb, requiredQueryType,
-  tasksFor, wordSizeRange, detectSequenceType,
+  tasksFor, wordSizeRange, detectSequenceType, validateQueryFasta,
 } from '@/lib/blastPrograms';
 import { DATABASE_REGISTRY, listSelectableDatabases, databaseType } from '@/lib/dbManager';
 
@@ -202,5 +202,76 @@ describe('program/database pairing must be self-consistent', () => {
   it('falls back to blastn for an unknown program rather than throwing', () => {
     const r = reconcile({ program: 'psiblast', database: 'drosophila', task: 'megablast' }, CATALOGUE);
     expect(r.program).toBe('blastn');
+  });
+});
+
+/**
+ * Regression: the search page validated every upload against a hard-coded
+ * nucleotide alphabet, so a protein FASTA was rejected in the browser before
+ * the server ever saw it — blastp and tblastn were unreachable through the
+ * interface. The same regex also omitted `U`, so RNA was rejected too.
+ */
+describe('upload validation follows the program, not a fixed alphabet', () => {
+  const DNA  = '>dna\nATGGCTAGCTAGCTAGCATCGATCGATCGTAGCTAGCTAGCATCGATCGATCGTAGCTAGC';
+  const RNA  = '>rna\nAUGGCUAGCUAGCUAGCAUCGAUCGAUCGUAGCUAGCUAGCAUCGAUCGAUCGUAGCUAGC';
+  const PROT = '>prot\nMKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPILSRVGDGTQDNLSGAEKAVQVKVKA';
+
+  it('accepts a protein query for the programs that require one', () => {
+    for (const p of ['blastp', 'tblastn']) {
+      expect(validateQueryFasta(PROT, requiredQueryType(p)).valid, p).toBe(true);
+    }
+  });
+
+  it('accepts a nucleotide query for the programs that require one', () => {
+    for (const p of ['blastn', 'blastx', 'tblastx']) {
+      expect(validateQueryFasta(DNA, requiredQueryType(p)).valid, p).toBe(true);
+    }
+  });
+
+  it('accepts RNA where nucleotide is required', () => {
+    expect(validateQueryFasta(RNA, 'nucl').valid).toBe(true);
+  });
+
+  it('rejects a protein file offered to a nucleotide program, naming the line', () => {
+    const r = validateQueryFasta(PROT, 'nucl');
+    expect(r.valid).toBe(false);
+    expect(r.reason).toMatch(/Line 2/);
+    expect(r.reason).toMatch(/nucleotide/);
+  });
+
+  /** Every nucleotide letter is also a valid amino-acid letter, so the
+   *  character check alone cannot catch this — composition has to. */
+  it('rejects a nucleotide file offered to a protein program', () => {
+    const r = validateQueryFasta(DNA, 'prot');
+    expect(r.valid).toBe(false);
+    expect(r.reason).toMatch(/looks like a nucleotide sequence/);
+    expect(r.reason).toMatch(/blastn, blastx or tblastx/);
+  });
+
+  it('names the alternative programs in the other direction too', () => {
+    expect(validateQueryFasta(PROT, 'nucl').reason).not.toMatch(/tblastn/);
+    const dnaToProt = validateQueryFasta(DNA, 'prot');
+    expect(dnaToProt.reason).toMatch(/blastx/);
+  });
+
+  it('keeps the structural checks', () => {
+    expect(validateQueryFasta('ATGC', 'nucl').reason).toMatch(/> header/);
+    expect(validateQueryFasta('>x\n', 'nucl').reason).toMatch(/No sequence data/);
+    expect(validateQueryFasta('>x\n\n>y\n', 'prot').reason).toMatch(/No sequence data/);
+  });
+
+  it('tolerates gaps, stops, CRLF and lower case', () => {
+    expect(validateQueryFasta('>x\r\natggctagctagctagcatcgatcgatcgtagctagc\r\n', 'nucl').valid).toBe(true);
+    expect(validateQueryFasta('>x\nMKTAYIAKQRQ-ISFVKSHFSRQLEERLGLIEVQAPILSRVGDG*', 'prot').valid).toBe(true);
+  });
+
+  it('does not guess for a sequence too short to classify', () => {
+    // Passes the nucleotide alphabet, and detection declines to call it.
+    expect(validateQueryFasta('>x\nATGC', 'nucl').valid).toBe(true);
+  });
+
+  it('defaults to nucleotide for an unrecognised molecule argument', () => {
+    expect(validateQueryFasta(DNA, undefined).valid).toBe(true);
+    expect(validateQueryFasta(PROT, 'rubbish').valid).toBe(false);
   });
 });

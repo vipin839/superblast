@@ -166,3 +166,63 @@ export function detectSequenceType(fasta) {
   }
   return { type: 'unknown', residues: residues.length, nucleotideFraction: fraction };
 }
+
+/**
+ * IUPAC residue alphabets, by molecule. `U` covers RNA on the nucleotide side
+ * and selenocysteine on the protein side; `*` is a translated stop codon and
+ * `-` / `.` are gap characters, all of which occur in real FASTA files.
+ */
+const RESIDUE_ALPHABET = {
+  nucl: /^[ACGTUNRYSWKMBDHV\s.*-]+$/i,
+  prot: /^[ACDEFGHIKLMNPQRSTVWYBZXJUO\s.*-]+$/i,
+};
+
+/**
+ * Validate an uploaded FASTA file against the molecule a program requires.
+ *
+ * The browser calls this before upload so a rejection is instant, and it
+ * enforces the same contract as the submit route: structure, then residue
+ * alphabet, then composition. The alphabets overlap heavily — every
+ * nucleotide letter is also a valid amino-acid letter — so the character
+ * check alone cannot separate the two, and `detectSequenceType` settles it.
+ *
+ * @param {string} content   raw file contents
+ * @param {'nucl'|'prot'} queryType  molecule the selected program requires
+ */
+export function validateQueryFasta(content, queryType) {
+  const wanted = queryType === 'prot' ? 'prot' : 'nucl';
+  const molecule = wanted === 'prot' ? 'protein' : 'nucleotide';
+  const trimmed = String(content || '').trim();
+
+  if (!trimmed.startsWith('>')) {
+    return { valid: false, reason: 'Must begin with a > header line' };
+  }
+
+  const alphabet = RESIDUE_ALPHABET[wanted];
+  const lines = trimmed.split(/\r?\n/);
+  let hasSequence = false;
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('>') || line.length === 0) continue;
+    if (!alphabet.test(line)) {
+      return { valid: false, reason: `Line ${i + 1} contains a character that is not a ${molecule} residue` };
+    }
+    hasSequence = true;
+  }
+
+  if (!hasSequence) return { valid: false, reason: 'No sequence data after the header' };
+
+  const detected = detectSequenceType(trimmed);
+  if (detected.type === 'nucl' || detected.type === 'prot') {
+    if (detected.type !== wanted) {
+      const got = detected.type === 'prot' ? 'protein' : 'nucleotide';
+      const alternatives = wanted === 'prot'
+        ? 'Use blastn, blastx or tblastx for nucleotide queries.'
+        : 'Use blastp or tblastn for protein queries.';
+      return { valid: false, reason: `This looks like a ${got} sequence, but ${molecule} is required. ${alternatives}` };
+    }
+  }
+
+  return { valid: true };
+}

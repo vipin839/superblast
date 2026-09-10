@@ -11,7 +11,7 @@ import {
   Select, Stepper, Icons as I, useToast,
 } from '@/components/ui';
 import { DATABASES, countBases, countSequences, formatBytes } from '@/lib/format';
-import { PROGRAMS, getProgram } from '@/lib/blastPrograms';
+import { PROGRAMS, getProgram, validateQueryFasta } from '@/lib/blastPrograms';
 import { usePref } from '@/lib/prefs';
 import { apiFetch, apiSend, newJobId, ApiClientError } from '@/lib/apiClient';
 
@@ -41,24 +41,6 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_PAYLOAD = 50 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = ['.fasta', '.fa', '.fna', '.faa', '.fas', '.fsa', '.txt'];
 const STEPS = ['Upload', 'Configure', 'Review'];
-
-/** Same validation contract the API enforces — checked here so failures are instant. */
-function validateFasta(content) {
-  const trimmed = content.trim();
-  if (!trimmed.startsWith('>')) return { valid: false, reason: 'Must begin with a > header line' };
-  const lines = trimmed.split('\n');
-  let hasSequence = false;
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (line.startsWith('>') || line.length === 0) continue;
-    if (!/^[ATCGNRYSWKMBDHVatcgnryswkmbdhv\s.-]+$/.test(line)) {
-      return { valid: false, reason: `Line ${i + 1} contains a non-nucleotide character` };
-    }
-    hasSequence = true;
-  }
-  if (!hasSequence) return { valid: false, reason: 'No sequence data after the header' };
-  return { valid: true };
-}
 
 export default function SearchPage() {
   const { user, loading } = useAuth();
@@ -99,14 +81,37 @@ export default function SearchPage() {
   const config = override ?? seed;
   const setConfig = (fn) => setOverride(typeof fn === 'function' ? fn(config) : fn);
 
+  // The molecule the selected program requires. blastp and tblastn take
+  // protein queries; the other three take nucleotide. Everything the upload
+  // panel says and accepts follows from this.
+  const queryType = getProgram(config.program)?.queryType ?? 'nucl';
+  const unit = queryType === 'prot'
+    ? { molecule: 'protein', long: 'residues', short: 'aa' }
+    : { molecule: 'nucleotide', long: 'bases', short: 'bp' };
+
   /**
    * Switching program changes both the legal database set and the legal task
    * set, so move the selection to something valid instead of leaving an
    * impossible combination on screen for the server to reject.
    */
   const setProgram = (name) => {
-    if (!getProgram(name)) return;
+    const spec = getProgram(name);
+    if (!spec) return;
     setConfig((c) => reconcile({ ...c, program: name }));
+
+    // A file accepted for one molecule can be the wrong one for another, so
+    // re-check what is already staged. Surfacing it here beats a 400 at submit.
+    if (spec.queryType === queryType || files.length === 0) return;
+    const kept = [];
+    const dropped = [];
+    for (const f of files) {
+      const check = validateQueryFasta(f.content, spec.queryType);
+      if (check.valid) kept.push(f);
+      else dropped.push({ name: f.name, reason: check.reason });
+    }
+    if (dropped.length === 0) return;
+    setFiles(kept);
+    setRejected(dropped);
   };
 
   useEffect(() => { if (!loading && !user) router.push('/'); }, [user, loading, router]);
@@ -146,7 +151,7 @@ export default function SearchPage() {
       }
       try {
         const content = await readFile(file);
-        const check = validateFasta(content);
+        const check = validateQueryFasta(content, queryType);
         if (!check.valid) { errors.push({ name: file.name, reason: check.reason }); continue; }
         accepted.push({
           name: file.name,
@@ -173,7 +178,7 @@ export default function SearchPage() {
     setRejected(errors);
     setReading(false);
     if (accepted.length) toast(`${accepted.length} file${accepted.length > 1 ? 's' : ''} added`);
-  }, [toast]);
+  }, [toast, queryType]);
 
   const removeFile = (name) => setFiles((v) => v.filter((f) => f.name !== name));
 
@@ -280,7 +285,10 @@ export default function SearchPage() {
           <Card pad="lg" className="stack g-4">
             <div>
               <div className="card-title">1 · Sequence files</div>
-              <p className="hint">FASTA nucleotide files. Up to {MAX_FILES} files, 10 MB each.</p>
+              <p className="hint">
+                FASTA {unit.molecule} files — {config.program} takes a {unit.molecule} query.
+                Up to {MAX_FILES} files, 10 MB each.
+              </p>
             </div>
 
             <div
@@ -320,7 +328,7 @@ export default function SearchPage() {
               <div className="stack g-3">
                 <div className="row between g-3 wrap">
                   <span className="t-sm" style={{ fontWeight: 700 }}>
-                    {totals.files} file{totals.files === 1 ? '' : 's'} · {totals.sequences} sequence{totals.sequences === 1 ? '' : 's'} · {totals.bases.toLocaleString()} bases
+                    {totals.files} file{totals.files === 1 ? '' : 's'} · {totals.sequences} sequence{totals.sequences === 1 ? '' : 's'} · {totals.bases.toLocaleString()} {unit.long}
                   </span>
                   <Button variant="ghost" size="sm" onClick={() => { setFiles([]); setRejected([]); }}>
                     <I.Trash /> Clear all
@@ -336,7 +344,7 @@ export default function SearchPage() {
                         <span className="file-meta">
                           <span>{formatBytes(f.size)}</span><span className="sep" />
                           <span>{f.sequences} seq</span><span className="sep" />
-                          <span className="mono">{f.bases.toLocaleString()} bp</span>
+                          <span className="mono">{f.bases.toLocaleString()} {unit.short}</span>
                         </span>
                       </span>
                       <span className="badge badge-success"><I.Check /> Valid</span>
@@ -422,11 +430,6 @@ export default function SearchPage() {
                     onChange={(e) => setConfig((c) => ({ ...c, maxTargetSeqs: e.target.value }))}
                   />
                 </Field>
-
-                <Callout tone="info" title="Protein searches">
-                  This deployment runs nucleotide <code>blastn</code> only. blastp, blastx and tblastn are not
-                  available on the current engine.
-                </Callout>
               </div>
             )}
           </Card>
@@ -437,7 +440,7 @@ export default function SearchPage() {
             <div className="stack g-2 t-sm">
               <div className="row between g-3"><span className="muted">Files</span><span className="mono">{totals.files}</span></div>
               <div className="row between g-3"><span className="muted">Sequences</span><span className="mono">{totals.sequences}</span></div>
-              <div className="row between g-3"><span className="muted">Total bases</span><span className="mono">{totals.bases.toLocaleString()}</span></div>
+              <div className="row between g-3"><span className="muted">Total {unit.long}</span><span className="mono">{totals.bases.toLocaleString()}</span></div>
               <div className="row between g-3"><span className="muted">Program</span><span className="mono">{config.program}</span></div>
               <div className="row between g-3"><span className="muted">Database</span><span className="mono">{config.database}</span></div>
               <div className="row between g-3"><span className="muted">Task</span><span className="mono">{config.task}</span></div>

@@ -16,7 +16,7 @@ const FEATURES = [
   {
     icon: I.Upload,
     title: 'Bulk FASTA intake',
-    body: 'Drop in up to 100 files at once. Headers and the IUPAC nucleotide alphabet are checked in the browser before anything is uploaded, so malformed sequences fail immediately rather than halfway through a run.',
+    body: 'Drop in up to 100 files at once. Headers and the IUPAC residue alphabet for the molecule your program requires are checked in the browser before anything is uploaded, so a malformed or wrong-molecule sequence fails immediately rather than halfway through a run.',
   },
   {
     icon: I.Cloud,
