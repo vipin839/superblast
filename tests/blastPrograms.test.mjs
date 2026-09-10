@@ -138,3 +138,69 @@ describe('sequence type detection', () => {
     expect(detectSequenceType('>x\r\nATGGCTAGCTAGCTAGCATCGATCGATCGTAGCTAGCTAGC\r\n').type).toBe('nucl');
   });
 });
+
+/**
+ * Regression: Settings offered every ready database, including the four
+ * protein ones, while saved defaults carried no `program` field. Picking a
+ * protein database produced {program:'blastn', database:'ecoli_protein'} —
+ * a combination the search page could not display and the server rejects
+ * with a 400. Both pages now reconcile the pairing.
+ */
+describe('program/database pairing must be self-consistent', () => {
+  // Mirrors reconcile() in search/page.js and setDefaultProgram() in settings.
+  const reconcile = (cfg, DATABASES) => {
+    const spec = getProgram(cfg.program) || PROGRAMS.blastn;
+    const dbOk = DATABASES.some((d) => d.value === cfg.database && d.type === spec.dbType);
+    const firstDb = DATABASES.find((d) => d.type === spec.dbType && d.ready !== false);
+    const taskValues = spec.tasks.map((t) => t.value);
+    return {
+      ...cfg,
+      program: spec.name,
+      database: dbOk ? cfg.database : (firstDb?.value ?? cfg.database),
+      task: taskValues.length === 0 ? '' : (taskValues.includes(cfg.task) ? cfg.task : spec.defaultTask),
+    };
+  };
+
+  const CATALOGUE = [
+    { value: 'drosophila', type: 'nucl', ready: true },
+    { value: 'ecoli', type: 'nucl', ready: true },
+    { value: 'ecoli_protein', type: 'prot', ready: true },
+    { value: 'yeast_protein', type: 'prot', ready: true },
+    { value: 'human', type: 'nucl', ready: false },
+  ];
+
+  it('heals a protein database saved against blastn', () => {
+    const r = reconcile({ program: 'blastn', database: 'ecoli_protein', task: 'megablast' }, CATALOGUE);
+    expect(r.database).toBe('drosophila');   // first ready nucleotide database
+    expect(r.program).toBe('blastn');
+  });
+
+  it('heals a nucleotide database saved against blastp', () => {
+    const r = reconcile({ program: 'blastp', database: 'drosophila', task: 'megablast' }, CATALOGUE);
+    expect(r.database).toBe('ecoli_protein');
+    expect(r.task).toBe('blastp');           // megablast is not a blastp task
+  });
+
+  it('leaves an already-valid pairing untouched', () => {
+    const r = reconcile({ program: 'blastp', database: 'yeast_protein', task: 'blastp-fast' }, CATALOGUE);
+    expect(r.database).toBe('yeast_protein');
+    expect(r.task).toBe('blastp-fast');
+  });
+
+  it('never selects a database the catalogue marks unavailable', () => {
+    const onlyHuman = [{ value: 'human', type: 'nucl', ready: false }];
+    const r = reconcile({ program: 'blastn', database: 'nonexistent', task: 'megablast' }, onlyHuman);
+    expect(r.database).not.toBe('human');
+  });
+
+  it('clears the task for tblastx, which takes no -task argument', () => {
+    const r = reconcile({ program: 'tblastx', database: 'ecoli', task: 'megablast' }, CATALOGUE);
+    expect(r.task).toBe('');
+    expect(r.database).toBe('ecoli');
+  });
+
+  it('falls back to blastn for an unknown program rather than throwing', () => {
+    const r = reconcile({ program: 'psiblast', database: 'drosophila', task: 'megablast' }, CATALOGUE);
+    expect(r.program).toBe('blastn');
+  });
+});

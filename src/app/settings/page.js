@@ -10,6 +10,7 @@ import {
   Button, Card, Callout, Field, Input, Modal, Segment, Switch, Tabs, Icons as I, useToast,
 } from '@/components/ui';
 import { DATABASES } from '@/lib/format';
+import { PROGRAMS, getProgram } from '@/lib/blastPrograms';
 import { removePref, usePref, writePref } from '@/lib/prefs';
 
 const TABS = [
@@ -44,8 +45,36 @@ export default function SettingsPage() {
   }, [storedDefaults]);
 
   const [draft, setDraft] = useState(null);
-  const defaults = draft ?? savedDefaults ?? { database: 'drosophila', task: 'megablast', evalue: '0.01', maxTargetSeqs: '50' };
+  const stored = draft ?? savedDefaults ?? {};
+  // `program` was absent from saved defaults, so the search form always seeded
+  // blastn while this page offered every database including the protein ones.
+  // Choosing one produced a combination the server rejects with a 400.
+  const defaults = {
+    program: 'blastn', database: 'drosophila', task: 'megablast',
+    evalue: '0.01', maxTargetSeqs: '50', ...stored,
+  };
   const setDefaults = (fn) => setDraft(typeof fn === 'function' ? fn(defaults) : fn);
+
+  const defaultSpec = getProgram(defaults.program) || PROGRAMS.blastn;
+  // Only databases this program can search, and only its own task variants.
+  const defaultDatabases = DATABASES.filter((d) => d.ready && d.type === defaultSpec.dbType);
+
+  /** Changing program invalidates the database and task, so reconcile both. */
+  const setDefaultProgram = (name) => {
+    const spec = getProgram(name);
+    if (!spec) return;
+    setDefaults((d) => {
+      const dbOk = DATABASES.some((x) => x.value === d.database && x.type === spec.dbType && x.ready);
+      const firstDb = DATABASES.find((x) => x.type === spec.dbType && x.ready);
+      const taskValues = spec.tasks.map((t) => t.value);
+      return {
+        ...d,
+        program: name,
+        database: dbOk ? d.database : (firstDb?.value ?? d.database),
+        task: taskValues.length === 0 ? '' : (taskValues.includes(d.task) ? d.task : spec.defaultTask),
+      };
+    });
+  };
 
   useEffect(() => { if (!loading && !user) router.push('/'); }, [user, loading, router]);
 
@@ -164,19 +193,29 @@ export default function SettingsPage() {
             <p className="hint">Pre-fills the new-search form. Stored in this browser.</p>
           </div>
 
-          <Field label="Database" htmlFor="d-db">
-            <select id="d-db" className="select" value={defaults.database} onChange={(e) => setDefaults((d) => ({ ...d, database: e.target.value }))}>
-              {DATABASES.filter((d) => d.ready).map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+          <Field label="BLAST program" htmlFor="d-prog" hint={defaultSpec.summary}>
+            <select id="d-prog" className="select" value={defaults.program} onChange={(e) => setDefaultProgram(e.target.value)}>
+              {Object.values(PROGRAMS).map((p) => <option key={p.name} value={p.name}>{p.label}</option>)}
             </select>
           </Field>
 
-          <Field label="Task" htmlFor="d-task">
-            <select id="d-task" className="select" value={defaults.task} onChange={(e) => setDefaults((d) => ({ ...d, task: e.target.value }))}>
-              <option value="megablast">megablast</option>
-              <option value="dc-megablast">dc-megablast</option>
-              <option value="blastn">blastn</option>
+          <Field label="Database" htmlFor="d-db" hint={`${defaultSpec.dbType === 'prot' ? 'Protein' : 'Nucleotide'} databases only — ${defaultSpec.label} cannot search the others.`}>
+            <select id="d-db" className="select" value={defaults.database} onChange={(e) => setDefaults((d) => ({ ...d, database: e.target.value }))}>
+              {defaultDatabases.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
           </Field>
+
+          {defaultSpec.tasks.length > 0 ? (
+            <Field label="Task" htmlFor="d-task">
+              <select id="d-task" className="select" value={defaults.task} onChange={(e) => setDefaults((d) => ({ ...d, task: e.target.value }))}>
+                {defaultSpec.tasks.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </Field>
+          ) : (
+            <Field label="Task" hint={`${defaultSpec.label} has no task variants.`}>
+              <Input value="—" readOnly aria-readonly="true" />
+            </Field>
+          )}
 
           <Field label="E-value threshold" htmlFor="d-ev">
             <Input id="d-ev" value={defaults.evalue} onChange={(e) => setDefaults((d) => ({ ...d, evalue: e.target.value }))} />

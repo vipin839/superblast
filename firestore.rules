@@ -14,7 +14,26 @@ rules_version = '2';
 // file, the deployed rules were inherited from an unrelated application and
 // nothing in this repository managed them.
 //
-// Deploy with:  npx firebase-tools deploy --only firestore:rules
+// ⚠ NOT WIRED INTO firebase.json, DELIBERATELY.
+//
+// Firebase project super-blast-497610 is shared with another application, and
+// the ruleset currently deployed there belongs to that one (election_config,
+// candidates, ballots, members, otps, invitations). Listing this file under a
+// `firestore` key in firebase.json would make a bare `firebase deploy` replace
+// that ruleset wholesale and break the other application, because nothing
+// below matches its collections.
+//
+// This file is therefore a reference: it records the access policy this
+// application depends on. Adopt it only after either
+//   (a) moving BLASTHub to its own Firebase project, or
+//   (b) merging these blocks into the shared ruleset by hand.
+//
+// To deploy deliberately, and only once one of those is true:
+//   npx firebase-tools deploy --only firestore:rules
+//
+// Until then BLASTHub is protected by the shared ruleset's catch-all
+// `match /{document=**} { allow read, write: if false; }`, which denies client
+// access to the jobs and users collections because no rule grants it.
 // ─────────────────────────────────────────────────────────────────────────
 
 service cloud.firestore {

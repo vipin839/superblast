@@ -15,6 +15,27 @@ import { PROGRAMS, getProgram } from '@/lib/blastPrograms';
 import { usePref } from '@/lib/prefs';
 import { apiFetch, apiSend, newJobId, ApiClientError } from '@/lib/apiClient';
 
+/**
+ * Force a config into a self-consistent state: the database must be one the
+ * program can search, and the task must be one the program accepts.
+ *
+ * This also migrates defaults saved before Settings had a program selector,
+ * which could pair a protein database with blastn — a combination the server
+ * rejects with a 400 while the picker showed no selection at all.
+ */
+function reconcile(cfg) {
+  const spec = getProgram(cfg.program) || PROGRAMS.blastn;
+  const dbOk = DATABASES.some((d) => d.value === cfg.database && d.type === spec.dbType);
+  const firstDb = DATABASES.find((d) => d.type === spec.dbType && d.ready !== false);
+  const taskValues = spec.tasks.map((t) => t.value);
+  return {
+    ...cfg,
+    program: spec.name,
+    database: dbOk ? cfg.database : (firstDb?.value ?? cfg.database),
+    task: taskValues.length === 0 ? '' : (taskValues.includes(cfg.task) ? cfg.task : spec.defaultTask),
+  };
+}
+
 const MAX_FILES = 100;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_PAYLOAD = 50 * 1024 * 1024;
@@ -69,7 +90,9 @@ export default function SearchPage() {
   const savedDefaults = usePref('blasthub-defaults', '');
   const seed = useMemo(() => {
     const base = { program: 'blastn', database: 'drosophila', evalue: '0.01', maxTargetSeqs: '50', task: 'megablast' };
-    try { return savedDefaults ? { ...base, ...JSON.parse(savedDefaults) } : base; } catch { return base; }
+    let merged = base;
+    try { merged = savedDefaults ? { ...base, ...JSON.parse(savedDefaults) } : base; } catch { return base; }
+    return reconcile(merged);
   }, [savedDefaults]);
 
   const [override, setOverride] = useState(null);
@@ -82,19 +105,8 @@ export default function SearchPage() {
    * impossible combination on screen for the server to reject.
    */
   const setProgram = (name) => {
-    const spec = getProgram(name);
-    if (!spec) return;
-    setConfig((c) => {
-      const dbStillValid = DATABASES.some((d) => d.value === c.database && d.type === spec.dbType);
-      const firstDb = DATABASES.find((d) => d.type === spec.dbType && d.ready !== false);
-      const taskValues = spec.tasks.map((t) => t.value);
-      return {
-        ...c,
-        program: name,
-        database: dbStillValid ? c.database : (firstDb?.value ?? c.database),
-        task: taskValues.length === 0 ? '' : (taskValues.includes(c.task) ? c.task : spec.defaultTask),
-      };
-    });
+    if (!getProgram(name)) return;
+    setConfig((c) => reconcile({ ...c, program: name }));
   };
 
   useEffect(() => { if (!loading && !user) router.push('/'); }, [user, loading, router]);
