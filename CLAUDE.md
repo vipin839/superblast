@@ -147,16 +147,19 @@ Database provenance and rebuild: [docs/DATABASES.md](docs/DATABASES.md).
 
 ## 6. Open items
 
+Last reviewed 10 September 2026.
+
 | Item | State |
 |---|---|
-| `www.superblast.app` | Does not resolve. DNS is at **name.com**, not Cloud DNS, so it needs registrar action — see docs/DEPLOYMENT.md. |
-| `GEMINI_API_KEY` | Not set in Cloud Run. The AI panel reports "unavailable" and shows a local summary until a key is added. |
-| Orphan Cloud Run services | `blasthub` (us-east4), `blasthub-app` (us-east4), `superblast-backend` (us-central1) — investigated, deletion not authorised. |
+| `www.superblast.app` | DNS A record added at name.com (`199.36.158.100`). Registered in Firebase Hosting as a 301 redirect to the apex. Waiting on Firebase to re-poll DNS and issue the certificate. |
+| `GEMINI_API_KEY` | Set, via Secret Manager (`gemini-api-key`). **`gemini-2.5-pro` is retired for new accounts** and Pro-tier has zero free-tier quota, so `GEMINI_MODEL` is set to `gemini-flash-latest,gemini-3.5-flash`. Enable billing on the AI Studio project to use Pro. |
+| Orphan Cloud Run services | Resolved. `blasthub-app` (us-east4) and `superblast-backend` (us-central1) deleted, along with a stale `superblast.app` domain mapping in us-east4. |
+| Second copy of the app | `blasthub` in **us-east4** still exists and was serving the *unpatched* API against live Firestore until 10 Sep 2026. It now runs the hardened image (min-instances 0). Traffic is Googlebot plus one old testing session. Delete once Google has de-indexed it. |
+| Duplicate indexing | Neither host serves a `robots.txt`, so Google indexes the `run.app` URL as a duplicate of `superblast.app`. Not yet addressed. |
 | Human GRCh38 database | Deliberately disabled; needs persistent disk and a pre-built index. |
 | Cross-instance cancellation | Best-effort by design; see docs/ARCHITECTURE.md. |
 | Runtime service account | Default compute SA, over-privileged. A dedicated SA would be better. |
-
----
+| Rate limits | Per-instance, in memory. A cost guard, not a security boundary. |
 
 ## 7. How to work on this
 
