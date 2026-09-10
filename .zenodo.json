@@ -1,23 +1,29 @@
 {
-  "title": "BLASTHub: bulk sequence search on managed NCBI BLAST+ infrastructure",
-  "description": "<p>BLASTHub is a web application for bulk sequence similarity search. It executes genuine NCBI BLAST+ searches &mdash; <code>blastn</code>, <code>blastp</code>, <code>blastx</code>, <code>tblastn</code> and <code>tblastx</code> &mdash; against pre-indexed reference databases on managed cloud infrastructure, and returns the native JSON-15 output parsed into an interactive hit table with per-HSP pairwise alignments.</p><p>Nucleotide and protein databases are provided for <em>Drosophila melanogaster</em>, <em>Escherichia coli</em> K-12 MG1655, <em>Saccharomyces cerevisiae</em> S288C and SARS-CoV-2, each pinned to a specific NCBI assembly accession with a recorded SHA-256 checksum and taxonomy identifier. The container build verifies every database with <code>blastdbcmd</code> and runs one search per program before the image ships, so a database that cannot be opened or searched cannot reach production.</p><p>Results can be exported as a multi-sheet Excel workbook, a landscape PDF report, or raw JSON and CSV. An optional interpretation step summarises results using the Gemini API; that output is explicitly non-reproducible and is labelled as such in the interface.</p>",
+  "title": "SuperBLAST (BLAST Hub): bulk sequence search on managed NCBI BLAST+ infrastructure",
+  "description": "<p>SuperBLAST (also referred to as BLAST Hub) is a web application for bulk sequence similarity searching. It exists because the two ordinary routes to BLAST both fail the same user. The public NCBI web service accepts one query at a time and imposes queueing and size limits; standalone BLAST+ has neither restriction but requires installing the suite, building databases with <code>makeblastdb</code>, and writing a script to loop over files. Neither serves a bench biologist holding a folder of a hundred sequences. SuperBLAST treats that as a problem of data management rather than of alignment science: it runs the genuine BLAST+ binaries on managed infrastructure and returns one organised, exportable result set per submission.</p><p>The work began as an MSc dissertation in Biotechnology at Guru Jambheshwar University of Science and Technology, Hisar, which examined why the existing options are difficult for non-specialists and compared three routes to a more accessible workflow: driving BLAST from Microsoft Excel, a standalone installation on an Amazon Web Services virtual machine, and a managed deployment on Google Cloud. Only the third proved workable, and it became this platform. The dissertation covered nucleotide search alone; this release extends the system to all five BLAST+ search programs with matching protein databases.</p><p>Searches execute against NCBI BLAST+ 2.17.0 &mdash; <code>blastn</code>, <code>blastp</code>, <code>blastx</code>, <code>tblastn</code> and <code>tblastx</code> &mdash; using the native JSON-15 output format, parsed into a sortable hit table with per-HSP pairwise alignments. This is an orchestration layer over the unmodified binaries, not a reimplementation and not a queue in front of the public NCBI service. A submission takes up to 100 FASTA files. The molecule of each query is checked against the molecule the chosen program requires before any process is started, so an incompatible pairing is refused with an explanation rather than failing opaquely. Reported metrics include percent identity, alignment length, mismatches, query and subject coverage, E-value, bit score, raw score, strand orientation, scientific name and taxonomy identifier, and both gap measures &mdash; gap openings and gap positions &mdash; reported separately rather than conflated. Results export as a multi-sheet Excel workbook with one sheet per query, a landscape PDF report, or raw JSON and CSV.</p><p>Eleven reference databases are provided, with nucleotide and protein sets for <em>Drosophila melanogaster</em>, <em>Escherichia coli</em> K-12 MG1655, <em>Saccharomyces cerevisiae</em> S288C and SARS-CoV-2, plus a two-species viral set. Each is pinned to a specific NCBI RefSeq assembly accession and carries a recorded source URL, SHA-256 checksum, record count and taxonomy identifier. The container build verifies every database with <code>blastdbcmd</code> and runs one search per program before the image ships, so a database that cannot be opened or searched cannot reach production. Validation queries are extracted from the database under test, so no sequence is invented and every expected result is independently checkable.</p><p>Two limits are stated rather than buried. The optional interpretation step summarises results using a commercial large language model; that output is non-deterministic, has not been evaluated against expert annotation, and is labelled as such in the interface &mdash; the BLAST results themselves are fully reproducible, the interpretation is not. And the platform is a working prototype rather than a finished production service: the file limit, the fixed database set and the absence of custom-database upload are deliberate boundaries of scope, not oversights.</p>",
   "upload_type": "software",
   "access_right": "open",
   "license": "MIT",
   "creators": [
     {
       "name": "Vipin",
+      "affiliation": "Guru Jambheshwar University of Science and Technology, Hisar, India",
       "orcid": "0009-0005-2924-7095"
     }
   ],
   "keywords": [
     "bioinformatics",
     "BLAST",
+    "NCBI BLAST+",
     "sequence alignment",
+    "sequence similarity search",
     "nucleotide",
     "protein",
     "genomics",
     "reference genome",
+    "high-throughput analysis",
+    "sequence data management",
+    "research software",
     "web application"
   ],
   "related_identifiers": [

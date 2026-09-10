@@ -14,6 +14,7 @@ const NAV = [
 ];
 
 const NAV_FOOT = [
+  { href: '/about', label: 'About', icon: I.Info },
   { href: '/settings', label: 'Settings', icon: I.Settings },
 ];
 
@@ -75,8 +76,8 @@ export default function AppShell({ title, crumbs, actions, children }) {
 
       <nav className="sidebar" data-open={mobileOpen ? 'true' : 'false'} aria-label="Main">
         <div className="sidebar-brand">
-          <Link href="/dashboard" className="brand-mark" aria-label="BLASTHub home" onClick={closeMobile}><I.Helix /></Link>
-          <span className="brand-word">BLAST<em>Hub</em></span>
+          <Link href="/dashboard" className="brand-mark" aria-label="SuperBLAST home" onClick={closeMobile}><I.Helix /></Link>
+          <span className="brand-word">Super<em>BLAST</em></span>
         </div>
 
         <div className="sidebar-scroll">

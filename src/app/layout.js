@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export const metadata = {
-  title: 'BLASTHub — Cloud Sequence Analysis',
+  title: 'SuperBLAST — Cloud Sequence Analysis',
   description:
     'Run bulk nucleotide and protein BLAST searches on managed NCBI BLAST+ infrastructure. Upload up to 100 FASTA files, explore alignments interactively, and export publication-ready reports.',
   keywords: 'BLAST, bioinformatics, nucleotide, protein, sequence alignment, NCBI, FASTA, genomics',

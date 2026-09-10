@@ -532,3 +532,20 @@ textarea.input { height:auto; padding:var(--s-3) var(--s-4); resize:vertical; li
 .mk-foot-link:hover { color:var(--fg); border-color:var(--border-strong); }
 .mk-foot-link svg { width:14px; height:14px; }
 .mk-legal { font-size:var(--t-xs); color:var(--fg-3); }
+
+/* ── 20. ABOUT PAGE ────────────────────────────────────────── */
+/* The results `.table` is fixed-layout with nowrap cells and a 940px floor,
+   which suits a dense hit table and not a prose table. These wrap instead. */
+.about-table-wrap { overflow-x:auto; border-radius:var(--r-lg); border:1px solid var(--border); background:var(--surface); box-shadow:var(--sh-sm); }
+.about-table { width:100%; border-collapse:collapse; font-size:var(--t-sm); min-width:560px; }
+.about-table caption { caption-side:bottom; text-align:left; padding:var(--s-3) var(--s-4); font-size:var(--t-xs); color:var(--fg-3); line-height:1.6; border-top:1px solid var(--border); }
+.about-table th, .about-table td { text-align:left; padding:var(--s-3) var(--s-4); vertical-align:top; }
+.about-table thead th { background:var(--surface-2); font-size:var(--t-2xs); font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--fg-3); white-space:nowrap; border-bottom:1px solid var(--border); }
+.about-table tbody td { border-bottom:1px solid var(--border); color:var(--fg-2); }
+.about-table tbody tr:last-child td { border-bottom:0; }
+.about-table tbody td:first-child { color:var(--fg); font-weight:600; }
+.about-table .mono { font-family:var(--f-mono); font-size:.92em; white-space:nowrap; }
+
+/* A citation is read, copied and pasted — so it wraps and breaks anywhere. */
+.cite { font-size:var(--t-sm); line-height:1.7; color:var(--fg); overflow-wrap:anywhere; }
+.cite a { overflow-wrap:anywhere; }
