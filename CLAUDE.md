@@ -152,15 +152,18 @@ Last reviewed 10 September 2026.
 
 | Item | State |
 |---|---|
-| `www.superblast.app` | DNS A record added at name.com (`199.36.158.100`). Registered in Firebase Hosting as a 301 redirect to the apex. Waiting on Firebase to re-poll DNS and issue the certificate. |
-| `GEMINI_API_KEY` | Set, via Secret Manager (`gemini-api-key`). **`gemini-2.5-pro` is retired for new accounts** and Pro-tier has zero free-tier quota, so `GEMINI_MODEL` is set to `gemini-flash-latest,gemini-3.5-flash`. Enable billing on the AI Studio project to use Pro. |
-| Orphan Cloud Run services | Resolved. `blasthub-app` (us-east4) and `superblast-backend` (us-central1) deleted, along with a stale `superblast.app` domain mapping in us-east4. |
-| Second copy of the app | `blasthub` in **us-east4** still exists and was serving the *unpatched* API against live Firestore until 10 Sep 2026. It now runs the hardened image (min-instances 0). Traffic is Googlebot plus one old testing session. Delete once Google has de-indexed it. |
-| Duplicate indexing | Neither host serves a `robots.txt`, so Google indexes the `run.app` URL as a duplicate of `superblast.app`. Not yet addressed. |
+| `www.superblast.app` | A record live, Firebase reports `DNS_MATCH`, 301 redirect to apex configured. Certificate provisioning. |
+| Gemini | Working via `GEMINI_MODEL=gemini-3.5-flash,gemini-flash-latest`. **`gemini-2.5-pro` is retired for new accounts** and Pro-tier has zero free-tier quota — enable billing on the AI Studio project to use Pro, then prepend it to `GEMINI_MODEL`. |
+| Runtime identity | us-central1 runs as `blasthub-runtime@` (Firestore, one bucket, one secret, logs). **us-east4 still uses the default compute SA with `roles/editor`.** |
+| Firestore | Point-in-time recovery **enabled** (7 days) and delete protection **enabled**. |
+| Monitoring | Uptime check every 5 min from 3 regions; alerts for site-down and 5xx rate, emailing sainivipin839@gmail.com. |
+| Second copy of the app | `blasthub` in us-east4 is patched and `robots.txt` blocks indexing. Delete once Google de-indexes it. |
+| Repository | `github.com/vipin839/superblast` — currently **public**. No secrets tracked. |
 | Human GRCh38 database | Deliberately disabled; needs persistent disk and a pre-built index. |
 | Cross-instance cancellation | Best-effort by design; see docs/ARCHITECTURE.md. |
-| Runtime service account | Default compute SA, over-privileged. A dedicated SA would be better. |
 | Rate limits | Per-instance, in memory. A cost guard, not a security boundary. |
+| npm advisories | 7 moderate, all transitive inside `firebase-admin`'s bundled storage client. |
+| Results retention | No lifecycle rule on the results bucket; objects accumulate indefinitely. |
 
 ## 7. How to work on this
 

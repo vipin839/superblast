@@ -93,6 +93,7 @@ export default function AppShell({ title, crumbs, actions, children }) {
         <div className="sidebar-foot">
           <Menu
             align="left"
+            drop="up"
             trigger={
               <button type="button" className="user-chip" aria-haspopup="menu">
                 {user?.photoURL

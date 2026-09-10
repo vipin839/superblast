@@ -1,5 +1,11 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+
+/*
+ * jspdf-autotable v5 no longer patches jsPDF.prototype.autoTable. The old
+ * prototype-style call threw "doc.autoTable is not a function", so PDF export
+ * failed for every user. v5 exposes a function that takes the doc instead.
+ */
 
 /**
  * Generate a PDF report from BLAST results
@@ -76,7 +82,7 @@ export function exportPDF(jobData, hits, aiAnalysis) {
     hit.bitScore?.toFixed(0) || '0',
   ]);
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     head: [[
       'Query', 'Subject Acc', 'Species', 'Identity',
@@ -179,7 +185,7 @@ export function exportPDF(jobData, hits, aiAnalysis) {
       `${h.sStart}-${h.sEnd}`,
     ]);
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       head: [['Accession', 'Species', 'Identity', 'Coverage', 'Align Len', 'E-value', 'Bit Score', 'Query Range', 'Subject Range']],
       body: qTableData,
@@ -193,7 +199,9 @@ export function exportPDF(jobData, hits, aiAnalysis) {
   // Save
   const filename = `BLASTHub_Report_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(filename);
-  return filename;
+  // The jsPDF document is returned alongside the filename so callers — and
+  // the export tests — can inspect what was actually generated.
+  return { filename, doc };
 }
 
 function formatEvalueForPDF(evalue) {

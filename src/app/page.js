@@ -8,7 +8,7 @@ import { Button, Card, Icons as I, useToast } from '@/components/ui';
 const CONTACT_EMAIL = 'sainivipin839@gmail.com';
 const GITHUB_URL = 'https://github.com/vipin839';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/s-vipin/';
-const DEPLOY_TIME = '2026-09-10 14:43:06 IST';
+const DEPLOY_TIME = '2026-09-10 14:55:35 IST';
 
 /* Every claim below is backed by something the codebase actually does. */
 const FEATURES = [

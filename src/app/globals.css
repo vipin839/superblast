@@ -149,13 +149,17 @@ p { text-wrap:pretty; }
 .nav-text { overflow:hidden; text-overflow:ellipsis; }
 .nav-count { margin-left:auto; font-family:var(--f-mono); font-size:var(--t-2xs); color:var(--fg-4); font-weight:500; }
 .nav-item[aria-current="page"] .nav-count { color:var(--fg-inv-2); }
-.sidebar-foot { padding-top:var(--s-4); border-top:1px solid var(--border); margin-top:var(--s-4); position:relative; }
+.sidebar-foot { padding-top:var(--s-4); border-top:1px solid var(--border); margin-top:var(--s-4); position:relative; flex:0 0 auto; }
 .user-chip { display:flex; align-items:center; gap:var(--s-3); padding:var(--s-2); border-radius:var(--r-md); width:100%; transition:background var(--d-fast) var(--e-out); }
 .user-chip:hover { background:var(--surface-2); }
 .avatar { width:32px; height:32px; flex:0 0 32px; border-radius:var(--r-pill); background:var(--surface-3); object-fit:cover; display:grid; place-items:center; font-size:var(--t-xs); font-weight:700; color:var(--fg-2); }
-.user-meta { min-width:0; text-align:left; flex:1; }
-.user-name { font-size:var(--t-sm); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.user-sub { font-size:var(--t-2xs); color:var(--fg-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.menu-trigger { display:block; }
+/* Was a plain span: the name and email rendered side by side on one line and
+   overflowed the card, because overflow/text-overflow do nothing on inline
+   boxes. A column flex container with min-width:0 lets both ellipsis. */
+.user-meta { display:flex; flex-direction:column; align-items:flex-start; min-width:0; text-align:left; flex:1; overflow:hidden; }
+.user-name { display:block; max-width:100%; font-size:var(--t-sm); font-weight:700; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.user-sub { display:block; max-width:100%; font-size:var(--t-2xs); color:var(--fg-3); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .shell[data-collapsed="true"] .brand-word,
 .shell[data-collapsed="true"] .nav-text,
 .shell[data-collapsed="true"] .nav-label,

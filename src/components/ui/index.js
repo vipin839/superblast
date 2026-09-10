@@ -365,8 +365,15 @@ export function Drawer({ open, onClose, title, sub, children }) {
 }
 
 /* ── Menu (click-outside dropdown) ─────────────────────── */
-export function Menu({ trigger, children, align = 'right' }) {
+/**
+ * `drop` controls which way the panel opens. It matters because the sidebar
+ * sets overflow:hidden, so a menu opening downward from the account chip at
+ * the very bottom is clipped away entirely and cannot be clicked. The
+ * placement also auto-flips upward whenever there is not enough room below.
+ */
+export function Menu({ trigger, children, align = 'right', drop = 'down' }) {
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState(drop);
   const wrap = useRef(null);
   useEffect(() => {
     if (!open) return;
@@ -376,16 +383,28 @@ export function Menu({ trigger, children, align = 'right' }) {
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
   }, [open]);
+  const toggle = () => {
+    // Measure before opening: if the trigger sits near the bottom of the
+    // viewport, drop upward so the panel stays on screen and clickable.
+    if (!open && wrap.current) {
+      const r = wrap.current.getBoundingClientRect();
+      setPlacement(window.innerHeight - r.bottom < 220 ? 'up' : drop);
+    }
+    setOpen((v) => !v);
+  };
+
+  const position = {
+    ...(align === 'right' ? { right: 0 } : { left: 0 }),
+    ...(placement === 'up'
+      ? { bottom: 'calc(100% + 6px)' }
+      : { top: 'calc(100% + 6px)' }),
+  };
+
   return (
     <div ref={wrap} style={{ position: 'relative' }}>
-      <span onClick={() => setOpen((v) => !v)}>{trigger}</span>
+      <span className="menu-trigger" onClick={toggle}>{trigger}</span>
       {open && (
-        <div
-          className="menu"
-          role="menu"
-          style={align === 'right' ? { right: 0, top: 'calc(100% + 6px)' } : { left: 0, top: 'calc(100% + 6px)' }}
-          onClick={() => setOpen(false)}
-        >
+        <div className="menu" role="menu" style={position} onClick={() => setOpen(false)}>
           {children}
         </div>
       )}
