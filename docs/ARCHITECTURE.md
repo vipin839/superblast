@@ -78,6 +78,22 @@ The container filesystem is still used for the two transient files BLAST+
 needs (`query_<rid>.fasta`, `out_<rid>.json`), which are deleted as soon as
 the search finishes.
 
+### Retention
+
+The results bucket carries a lifecycle policy:
+
+| Rule | Age |
+|---|---|
+| Delete object | 365 days |
+| Abort incomplete multipart upload | 7 days |
+
+One year was chosen so a result outlives any realistic write-up cycle while
+still bounding storage growth. Firestore job metadata is **not** covered by
+this rule, so an expired search still appears in history — `/api/blast/results`
+returns 404 with "its results have expired", and the results page reports that
+rather than showing an empty table. The landing page states the one-year
+lifetime explicitly; if the rule changes, that copy must change with it.
+
 ## Job cancellation — and its honest limit
 
 `src/lib/nativeBlast.js` keeps a registry of live child processes keyed by RID.
@@ -120,9 +136,17 @@ loads the results **it stored** from Cloud Storage, and builds the prompt
 itself. No caller-supplied text reaches the model, so the endpoint cannot be
 used as a general Gemini proxy.
 
-- Model: `gemini-2.5-pro` (stable ID, not a preview alias)
-- Key: `GEMINI_API_KEY`, server-side only, sent as the `x-goog-api-key`
-  **header** — never a URL parameter
+- Model: a candidate list in `GEMINI_MODEL`, first that answers wins. The
+  response reports the model that actually replied, and the UI badge names it.
+  `gemini-2.5-pro` was the original target but the API now returns 404
+  "no longer available to new users" for it, and Pro-tier has a free-tier
+  quota of zero — Pro requires billing on the AI Studio project.
+  Current value: `gemini-3.5-flash,gemini-flash-latest`.
+- Transient upstream failures (408/429/500/502/503/504) retry the same model
+  once after 1.5 s, then fall through the chain. 503 "high demand" is common
+  and was previously not retried, which silently produced a local summary.
+- Key: `GEMINI_API_KEY`, from Secret Manager, server-side only, sent as the
+  `x-goog-api-key` **header** — never a URL parameter
 - The prompt fences measurements inside `=== OBSERVED BLAST DATA ===` and
   instructs the model to treat that block as data, never as instructions
 
@@ -138,7 +162,7 @@ The image is split so that deploys stop paying for database indexing:
 
 | Image | Contents | Rebuild when |
 |---|---|---|
-| `blasthub-base:blast2.17.0-db2` | Debian + BLAST+ 2.17.0 + all reference databases | the engine version or a database definition changes |
+| `blasthub-base:blast2.17.0-db3` | Debian + BLAST+ 2.17.0 + five reference databases + NCBI taxdb | the engine version or a database definition changes |
 | `blasthub:latest` | `FROM blasthub-base`, plus the Next.js standalone build | every code change |
 
 Application builds no longer download BLAST+ or run `makeblastdb`. Cache
@@ -168,9 +192,15 @@ processed after the response is sent, and a scale-to-zero would kill them.
 2. Rate limits are per-instance (above).
 3. The human GRCh38 database is not provisioned; the option is disabled with a
    stated reason rather than shown as available.
-4. The service runs as the default compute service account, which is broadly
-   privileged. A dedicated service account with only Firestore, Storage and
-   log-write permissions would be better.
-5. The results bucket is in us-east4 while the service runs in us-central1 —
-   cross-region reads on every poll. Functional, but a same-region bucket
-   would be faster and cheaper.
+4. ~~Default compute service account~~ — resolved 10 Sep 2026. Both regions
+   run as `blasthub-runtime@`, holding only `datastore.user`,
+   `firebaseauth.viewer`, `logging.logWriter`, `monitoring.metricWriter`,
+   `cloudtrace.agent`, plus `storage.objectAdmin` scoped to the results bucket
+   and `secretmanager.secretAccessor` scoped to the Gemini key.
+   `firebaseauth.viewer` is required because `verifyIdToken` runs with
+   `checkRevoked: true`.
+5. The results bucket is in us-east4 while the primary service runs in
+   us-central1 — cross-region reads on every poll. Functional, but a
+   same-region bucket would be faster and cheaper.
+6. Rate limits are per-instance (see above), and cross-instance cancellation
+   is best-effort (see above).

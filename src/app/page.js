@@ -8,7 +8,7 @@ import { Button, Card, Icons as I, useToast } from '@/components/ui';
 const CONTACT_EMAIL = 'sainivipin839@gmail.com';
 const GITHUB_URL = 'https://github.com/vipin839';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/s-vipin/';
-const DEPLOY_TIME = '2026-09-10 14:55:35 IST';
+const DEPLOY_TIME = '2026-09-10 15:12:47 IST';
 
 /* Every claim below is backed by something the codebase actually does. */
 const FEATURES = [
@@ -172,10 +172,11 @@ export default function HomePage() {
             </Card>
             <Card className="mk-feature">
               <span className="mk-feature-icon"><I.Clock /></span>
-              <h3>Working files are swept hourly</h3>
+              <h3>Your data has a clear lifetime</h3>
               <p>
-                Temporary query and result files are deleted an hour after a run completes. Search
-                metadata and hit tables stay in your history until you delete them yourself.
+                Temporary query files are deleted within an hour of a run finishing. Result
+                data is kept for one year and then removed automatically. You can delete any
+                search yourself at any time, and that takes effect immediately.
               </p>
             </Card>
           </div>
